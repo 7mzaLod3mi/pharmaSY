@@ -356,6 +356,7 @@ model Pharmacy {
   favorites        Favorite[]
   sales            Sale[]
   saleReturns      SaleReturn[]
+  imports          ProductImport[]
 
   // Soft delete
   deletedAt DateTime?
@@ -812,8 +813,10 @@ model Inventory {
   batchNumber  String
   expiryDate   DateTime
   purchaseCost Decimal  @db.Decimal(15, 2)
+  sellingPrice Decimal? @db.Decimal(15, 2)
   supplierId   String?
   supplierName String?
+  supplierReference String?
   
   quantity      Int     @default(0)
   reservedStock Int     @default(0)
@@ -1028,8 +1031,10 @@ model MarketplaceOffer {
 
 model ProductImport {
   id           String       @id @default(uuid())
-  supplierId   String
-  supplier     Supplier     @relation(fields: [supplierId], references: [id])
+  supplierId   String?
+  supplier     Supplier?    @relation(fields: [supplierId], references: [id])
+  pharmacyId   String?
+  pharmacy     Pharmacy?    @relation(fields: [pharmacyId], references: [id])
   fileName     String
   fileUrl      String
   status       ImportStatus @default(QUEUED)
@@ -1045,6 +1050,7 @@ model ProductImport {
   updatedAt DateTime @updatedAt
 
   @@index([supplierId])
+  @@index([pharmacyId])
   @@index([status])
   @@map("product_imports")
 }

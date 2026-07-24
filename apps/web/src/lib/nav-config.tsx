@@ -18,12 +18,16 @@ import {
   ClipboardList,
   UploadCloud,
   Recycle,
+  Receipt,
 } from "lucide-react";
 import type { NavSection } from "@/components/layout/sidebar";
 
 export const pharmacyNav: NavSection[] = [
   {
-    items: [{ label: "Dashboard", href: "/pharmacy/dashboard", icon: LayoutGrid }],
+    items: [
+      { label: "Dashboard", href: "/pharmacy/dashboard", icon: LayoutGrid },
+      { label: "Point of Sale", href: "/pharmacy/pos", icon: Receipt },
+    ],
   },
   {
     title: "Buy",
@@ -41,7 +45,10 @@ export const pharmacyNav: NavSection[] = [
       { label: "Orders", href: "/pharmacy/orders", icon: ClipboardList },
       { label: "Inventory", href: "/pharmacy/inventory", icon: Boxes },
       { label: "Movements", href: "/pharmacy/inventory/movements", icon: ArrowLeftRight },
-      { label: "Expiry alerts", href: "/pharmacy/inventory/expiry", icon: AlertTriangle, badge: "5" },
+      { label: "Low stock", href: "/pharmacy/inventory/alerts/low-stock", icon: AlertTriangle },
+      { label: "Expiry alerts", href: "/pharmacy/inventory/alerts/expiry", icon: AlertTriangle, badge: "5" },
+      { label: "Setup & Import", href: "/pharmacy/setup", icon: UploadCloud },
+      { label: "Reports", href: "/pharmacy/reports", icon: FileBarChart },
       { label: "Exchange", href: "/pharmacy/exchange", icon: Recycle },
       { label: "Favorites", href: "/pharmacy/favorites", icon: Heart },
     ],

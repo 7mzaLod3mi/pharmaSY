@@ -8,6 +8,7 @@ import { UserRole } from '@pharmasyn/types';
 import type { JwtPayload } from '@pharmasyn/types';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { Permissions } from '../common/permissions';
+import { CommitInventoryImportDto } from './dto/import.dto';
 
 @ApiTags('inventory')
 @ApiBearerAuth()
@@ -54,6 +55,21 @@ export class InventoryController {
     return this.inventoryService.getExpiryAlerts(user.orgId!, days ? parseInt(days, 10) : 90);
   }
 
+  @Get('movements')
+  @Roles(UserRole.PHARMACY)
+  @ApiOperation({ summary: 'Get global pharmacy movement history' })
+  async getGlobalMovements(
+    @CurrentUser() user: JwtPayload,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.inventoryService.getGlobalMovements(
+      user.orgId!,
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 20,
+    );
+  }
+
   @Get(':id/movements')
   @Roles(UserRole.PHARMACY)
   @ApiOperation({ summary: 'Get batch movement history' })
@@ -80,6 +96,17 @@ export class InventoryController {
     @Body() dto: CreateInventoryBatchDto,
   ) {
     return this.inventoryService.createBatch(user.orgId!, user.sub, dto);
+  }
+
+  @Post('import/commit')
+  @Roles(UserRole.PHARMACY)
+  @RequirePermissions(Permissions.INVENTORY_MANAGE)
+  @ApiOperation({ summary: 'Commit inventory import rows' })
+  async commitImport(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: CommitInventoryImportDto,
+  ) {
+    return this.inventoryService.commitImport(user.orgId!, user.sub, dto);
   }
 
   @Patch(':id/adjust')
