@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUpsertSupplierProduct } from "../hooks/use-supplier-products";
 import type { SupplierProduct } from "../api/supplier-products.types";
+import { ProductSearchSelect } from "@/features/inventory/components/product-search-select";
+import { normalizeApiError } from "@/lib/http-client";
 
 interface ProductDialogProps {
   isOpen: boolean;
@@ -26,11 +28,36 @@ export function ProductDialog({ isOpen, onOpenChange, product }: ProductDialogPr
   const upsertProduct = useUpsertSupplierProduct();
   
   const [formData, setFormData] = useState({
-    productId: product?.id || "",
+    productId: product?.productId || "",
     price: product?.price?.toString() || "",
-    stock: product?.id ? "100" : "", // Mock for now, stock isn't in SupplierProduct type directly but moq is
+    stock: product?.stock?.toString() || "",
     minOrder: product?.moq?.toString() || "1",
+    expiryDate: product?.expiryDate?.slice(0, 10) || "",
+    batchNumber: product?.batchNumber || "",
+    notes: product?.notes || "",
+    isAvailable: product?.isAvailable ?? true,
+    discountTiers:
+      product?.quantityDiscounts
+        .map((tier) => `${tier.minQuantity}:${tier.unitPrice}`)
+        .join(", ") || "",
   });
+
+  useEffect(() => {
+    setFormData({
+      productId: product?.productId || "",
+      price: product?.price?.toString() || "",
+      stock: product?.stock?.toString() || "",
+      minOrder: product?.moq?.toString() || "1",
+      expiryDate: product?.expiryDate?.slice(0, 10) || "",
+      batchNumber: product?.batchNumber || "",
+      notes: product?.notes || "",
+      isAvailable: product?.isAvailable ?? true,
+      discountTiers:
+        product?.quantityDiscounts
+          .map((tier) => `${tier.minQuantity}:${tier.unitPrice}`)
+          .join(", ") || "",
+    });
+  }, [product, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,18 +66,45 @@ export function ProductDialog({ isOpen, onOpenChange, product }: ProductDialogPr
       return;
     }
     
+    const quantityDiscounts = formData.discountTiers
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+      .map((entry) => {
+        const [minimum, price] = entry.split(":").map(Number);
+        return { minQuantity: minimum, unitPrice: price };
+      });
+    if (
+      quantityDiscounts.some(
+        (tier) =>
+          !Number.isInteger(tier.minQuantity) ||
+          tier.minQuantity < 1 ||
+          !Number.isFinite(tier.unitPrice) ||
+          tier.unitPrice < 0
+      )
+    ) {
+      toast.error("Discount tiers must use the format quantity:price.");
+      return;
+    }
+
     upsertProduct.mutate(
       {
         productId: formData.productId,
         price: Number(formData.price),
         stock: Number(formData.stock),
         minOrder: Number(formData.minOrder),
+        expiryDate: formData.expiryDate || undefined,
+        batchNumber: formData.batchNumber.trim() || undefined,
+        notes: formData.notes.trim() || undefined,
+        isAvailable: formData.isAvailable,
+        quantityDiscounts,
       },
       {
         onSuccess: () => {
           toast.success(product ? "Product updated successfully" : "Product added successfully");
           onOpenChange(false);
         },
+        onError: (error) => toast.error(normalizeApiError(error).message),
       }
     );
   };
@@ -70,14 +124,18 @@ export function ProductDialog({ isOpen, onOpenChange, product }: ProductDialogPr
         <form onSubmit={handleSubmit}>
           <DialogBody className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="productId">Master Product ID (UUID)</label>
-              <Input
-                id="productId"
-                value={formData.productId}
-                onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
-                placeholder="Enter master product ID"
-                disabled={!!product}
-              />
+              <label className="text-sm font-medium">Master catalog product</label>
+              {product ? (
+                <Input value={product.name} disabled />
+              ) : (
+                <ProductSearchSelect
+                  value={formData.productId}
+                  onChange={(productId) =>
+                    setFormData((current) => ({ ...current, productId }))
+                  }
+                  placeholder="Search the master catalog..."
+                />
+              )}
             </div>
             
             <div className="grid grid-cols-2 gap-4">
@@ -117,6 +175,73 @@ export function ProductDialog({ isOpen, onOpenChange, product }: ProductDialogPr
                 placeholder="1"
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="batchNumber">
+                  Batch number
+                </label>
+                <Input
+                  id="batchNumber"
+                  value={formData.batchNumber}
+                  onChange={(event) =>
+                    setFormData({ ...formData, batchNumber: event.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="expiryDate">
+                  Expiry date
+                </label>
+                <Input
+                  id="expiryDate"
+                  type="date"
+                  value={formData.expiryDate}
+                  onChange={(event) =>
+                    setFormData({ ...formData, expiryDate: event.target.value })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="discountTiers">
+                Quantity discounts
+              </label>
+              <Input
+                id="discountTiers"
+                placeholder="10:9.50, 50:8.75"
+                value={formData.discountTiers}
+                onChange={(event) =>
+                  setFormData({ ...formData, discountTiers: event.target.value })
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter each minimum quantity and unit price separated by a colon.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="notes">Notes</label>
+              <Input
+                id="notes"
+                value={formData.notes}
+                onChange={(event) =>
+                  setFormData({ ...formData, notes: event.target.value })
+                }
+              />
+            </div>
+
+            <label className="flex items-center gap-2 text-sm font-medium">
+              <input
+                checked={formData.isAvailable}
+                type="checkbox"
+                onChange={(event) =>
+                  setFormData({ ...formData, isAvailable: event.target.checked })
+                }
+              />
+              Available in marketplace
+            </label>
           </DialogBody>
           
           <DialogFooter>

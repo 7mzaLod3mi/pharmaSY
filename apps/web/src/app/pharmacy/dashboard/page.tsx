@@ -37,6 +37,16 @@ export default function PharmacyDashboardPage() {
   const { data: orders, isLoading: ordersLoading } = useOrders();
   
   const recentOrders = orders?.slice(0, 5);
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const monthlySpend =
+    orders
+      ?.filter(
+        (order) =>
+          new Date(order.placedAt) >= monthStart && order.status !== "cancelled"
+      )
+      .reduce((sum, order) => sum + order.total, 0) ?? 0;
 
   return (
     <DashboardShell sections={pharmacyNav} roleLabel="Pharmacy" userName="Pharmacy">
@@ -54,7 +64,7 @@ export default function PharmacyDashboardPage() {
         <StatCard label="Open orders" value={orders?.filter(o => o.status === 'pending').length.toString() || "0"} animatedValue={orders?.filter(o => o.status === 'pending').length || 0} icon={ClipboardList} />
         <StatCard label="Inventory value" value={`$${inventory?.totalInventoryValue?.toLocaleString() || "0"}`} animatedValue={inventory?.totalInventoryValue || 0} format="currency" icon={Boxes} />
         <StatCard label="Expiry alerts" value={`${inventory?.nearExpiryCount || 0} SKUs`} animatedValue={inventory?.nearExpiryCount || 0} suffix=" SKUs" icon={AlertTriangle} />
-        <StatCard label="Monthly spend" value="$0" animatedValue={0} format="currency" icon={Wallet} />
+        <StatCard label="Monthly spend" value={`$${monthlySpend.toLocaleString()}`} animatedValue={monthlySpend} format="currency" icon={Wallet} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -64,8 +74,10 @@ export default function PharmacyDashboardPage() {
               <CardTitle>Recent orders</CardTitle>
               <CardDescription>Your latest purchase orders across all suppliers</CardDescription>
             </div>
-            <Button variant="secondary" size="sm">
+            <Button variant="secondary" size="sm" asChild>
+              <Link href="/pharmacy/orders">
               View all <ArrowUpRight className="size-3.5" />
+              </Link>
             </Button>
           </CardHeader>
           <Table>
@@ -83,8 +95,8 @@ export default function PharmacyDashboardPage() {
                 <TR><TD colSpan={5} className="text-center py-4 text-muted-foreground">Loading orders...</TD></TR>
               ) : recentOrders?.length === 0 ? (
                 <TR><TD colSpan={5} className="text-center py-4 text-muted-foreground">No recent orders found.</TD></TR>
-              ) : recentOrders?.map((o: any) => (
-                <TR key={o.id}>
+              ) : recentOrders?.map((o) => (
+                <TR key={o.id} className="cursor-pointer">
                   <TD className="font-medium">{o.orderNumber || o.id.slice(0, 8)}</TD>
                   <TD className="text-muted-foreground">{o.supplierName}</TD>
                   <TD className="text-muted-foreground">{o.itemCount}</TD>
@@ -107,7 +119,7 @@ export default function PharmacyDashboardPage() {
           <CardContent className="space-y-3">
             {expiryLoading ? (
               <p className="text-sm text-muted-foreground">Loading alerts...</p>
-            ) : expiryAlerts?.slice(0, 3).map((item: any) => {
+            ) : expiryAlerts?.slice(0, 3).map((item) => {
               const diffTime = Math.max(0, new Date(item.expiryDate).getTime() - Date.now());
               const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
               return (
@@ -116,7 +128,9 @@ export default function PharmacyDashboardPage() {
                 className="flex items-center justify-between rounded-[var(--radius-md)] border border-border px-3 py-2.5"
               >
                 <div>
-                  <p className="text-[13.5px] font-medium">{item.productNameAr || item.product?.tradeNameAr || "Product"}</p>
+                  <p className="text-[13.5px] font-medium">
+                    {item.product.tradeNameAr || item.product.tradeNameEn}
+                  </p>
                   <p className="text-[12px] text-muted-foreground">Expires in {diffDays} days</p>
                 </div>
                 <Badge variant={diffDays <= 0 ? "danger" : "warning"}>{diffDays <= 0 ? "Expired" : "Act soon"}</Badge>

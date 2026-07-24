@@ -11,13 +11,36 @@ import { apiClient } from "@/lib/api-client";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
+interface GlobalInventoryMovement {
+  id: string;
+  createdAt: string;
+  batchNumber: string;
+  type: string;
+  difference: number;
+  reason?: string | null;
+  inventory?: {
+    product?: { tradeNameAr: string; tradeNameEn: string };
+  } | null;
+  user?: { firstName: string; lastName: string } | null;
+}
+
+interface MovementPage {
+  data: GlobalInventoryMovement[];
+  meta: {
+    page: number;
+    totalPages: number;
+    hasPrevPage: boolean;
+    hasNextPage: boolean;
+  };
+}
+
 export default function GlobalMovementsPage() {
   const [page, setPage] = useState(1);
   
   const { data, isLoading } = useQuery({
     queryKey: ['inventory-movements', 'global', page],
     queryFn: async () => {
-      const res = await apiClient.get('/inventory/movements', { params: { page, limit: 20 } });
+      const res = await apiClient.get<MovementPage>('/inventory/movements', { params: { page, limit: 20 } });
       return res.data;
     }
   });
@@ -62,7 +85,7 @@ export default function GlobalMovementsPage() {
               ) : movements.length === 0 ? (
                 <TR><TD colSpan={6} className="text-center py-6 text-muted-foreground">No stock movements found.</TD></TR>
               ) : (
-                movements.map((movement: any) => (
+                movements.map((movement) => (
                   <TR key={movement.id}>
                     <TD className="text-sm">
                       {new Date(movement.createdAt).toLocaleString()}
@@ -72,7 +95,7 @@ export default function GlobalMovementsPage() {
                     </TD>
                     <TD className="text-sm text-muted-foreground">{movement.batchNumber}</TD>
                     <TD>
-                      <Badge variant="outline" className={getMovementColor(movement.type)}>
+                      <Badge variant="neutral" className={getMovementColor(movement.type)}>
                         {movement.type.replace('_', ' ')}
                       </Badge>
                     </TD>

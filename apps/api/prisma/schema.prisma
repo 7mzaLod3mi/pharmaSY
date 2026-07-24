@@ -1057,6 +1057,20 @@ model ProductImport {
 
 // ─── Audit Logs ───────────────────────────────────────────────────────────────
 
+model InventoryImportMutation {
+  id               String   @id @default(uuid())
+  pharmacyId       String
+  userId           String
+  clientMutationId String
+  requestHash      String
+  result           Json
+  createdAt        DateTime @default(now())
+
+  @@unique([pharmacyId, clientMutationId])
+  @@index([pharmacyId, createdAt])
+  @@map("inventory_import_mutations")
+}
+
 model AuditLog {
   id         String   @id @default(uuid())
   entityType String   // 'Order', 'User', 'Inventory', etc.

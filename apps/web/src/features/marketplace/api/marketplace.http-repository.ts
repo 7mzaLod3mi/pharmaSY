@@ -74,15 +74,24 @@ export const marketplaceHttpRepository: MarketplaceRepository = {
     const response = await apiRequest<Paged<MarketplaceOffer>>({
       method: "GET",
       url: "/marketplace/products",
-      params: { q: filters?.search || undefined },
+      params: {
+        q: filters?.search || undefined,
+        categoryId: filters?.categoryId || undefined,
+        limit: 100,
+      },
     });
-    return response.data
-      .map(mapOffer)
-      .filter((item) => !filters?.categoryId || item.categoryId === filters.categoryId);
+    return response.data.map(mapOffer);
   },
   async getProduct(id: string) {
     const products = await this.listProducts();
     return products.find((product) => product.id === id);
+  },
+  async listProductOffers(productId: string) {
+    const response = await apiRequest<Paged<MarketplaceOffer>>({
+      method: "GET",
+      url: `/marketplace/products/${productId}`,
+    });
+    return response.data.map(mapOffer);
   },
   async listCategories() {
     const categories = await apiRequest<CategoryNode[]>({ method: "GET", url: "/categories" });

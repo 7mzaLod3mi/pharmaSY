@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -12,12 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ShoppingCart, Trash2, ArrowRight, Package } from "lucide-react";
 import { useCartStore, groupCartBySupplier } from "@/stores/cart-store";
-import { apiClient } from "@/lib/http-client";
+import { apiRequest, normalizeApiError } from "@/lib/http-client";
+import { getOrCreateDeviceId } from "@/lib/device-id";
 
 export default function CartPage() {
   const router = useRouter();
   const { lines, setQuantity, removeLine, clear } = useCartStore();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const checkoutMutationId = useRef<string | null>(null);
 
   const groups = Array.from(groupCartBySupplier(lines).entries());
   const totalAmount = lines.reduce((acc, line) => acc + line.unitPrice * line.quantity, 0);
@@ -36,15 +38,19 @@ export default function CartPage() {
             quantity: i.quantity,
           }))
         })),
-        clientMutationId: crypto.randomUUID(),
+        clientMutationId:
+          checkoutMutationId.current ??
+          (checkoutMutationId.current = crypto.randomUUID()),
+        deviceId: getOrCreateDeviceId(),
       };
       
-      const res = await apiClient.post("/orders/checkout", payload);
+      await apiRequest({ method: "POST", url: "/orders/checkout", data: payload });
       toast.success("Order placed successfully!");
+      checkoutMutationId.current = null;
       clear();
       router.push("/pharmacy/orders");
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Failed to checkout. Please try again.");
+    } catch (error: unknown) {
+      toast.error(normalizeApiError(error).message);
     } finally {
       setIsCheckingOut(false);
     }
@@ -57,7 +63,7 @@ export default function CartPage() {
         <div className="mt-8 flex flex-col items-center justify-center gap-4 rounded-[var(--radius-lg)] border border-dashed border-border py-16 text-center">
           <ShoppingCart className="size-10 text-muted-foreground/50" />
           <h3 className="text-lg font-medium">Your cart is empty</h3>
-          <p className="text-sm text-muted-foreground">Looks like you haven't added any products to your cart yet.</p>
+          <p className="text-sm text-muted-foreground">Looks like you haven&apos;t added any products to your cart yet.</p>
           <Button asChild className="mt-2">
             <Link href="/pharmacy/marketplace">Browse Marketplace</Link>
           </Button>

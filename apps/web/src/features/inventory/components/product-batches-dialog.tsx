@@ -7,45 +7,47 @@ import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { useCreateBatch, useAdjustBatch, useDeleteBatch } from "../hooks/use-inventory";
+import { useCreateBatch, useAdjustBatch, useDeleteBatch, useInventoryMovements } from "../hooks/use-inventory";
 import { Trash2, Edit2, Plus, Loader2 } from "lucide-react";
+import type {
+  InventoryAdjustmentType,
+  InventoryBatch,
+  InventoryProduct,
+} from "../api/inventory.types";
+import { normalizeApiError } from "@/lib/http-client";
 
 export function ProductBatchesDialog({ 
   product, 
   isOpen, 
   onClose 
 }: { 
-  product: any | null; 
+  product: InventoryProduct | null;
   isOpen: boolean; 
   onClose: () => void;
 }) {
   const [view, setView] = useState<"list" | "add" | "adjust" | "movements">("list");
-  const [selectedBatch, setSelectedBatch] = useState<any>(null);
+  const [selectedBatch, setSelectedBatch] = useState<InventoryBatch | null>(null);
   
   const createBatch = useCreateBatch();
   const adjustBatch = useAdjustBatch();
   const deleteBatch = useDeleteBatch();
   
-  // Use a query client to fetch movements dynamically
-  const { useQuery } = require("@tanstack/react-query");
-  const { inventoryRepository } = require("../api/inventory.repository.instance");
-  const { data: movements, isLoading: loadingMovements } = useQuery({
-    queryKey: ["inventory", "movements", product?.id],
-    queryFn: () => inventoryRepository.listMovements(product?.id),
-    enabled: !!product?.id && view === "movements",
-  });
+  const { data: movements, isLoading: loadingMovements } = useInventoryMovements(
+    view === "movements" ? product?.id : undefined,
+  );
 
   const [addForm, setAddForm] = useState({
     batchNumber: "",
     expiryDate: "",
     quantity: 0,
     purchaseCost: 0,
+    sellingPrice: 0,
     minStock: 0,
   });
 
   const [adjustForm, setAdjustForm] = useState({
     quantity: 0,
-    type: "MANUAL_ADJUSTMENT",
+    type: "MANUAL_ADJUSTMENT" as InventoryAdjustmentType,
     reason: "",
   });
 
@@ -58,18 +60,19 @@ export function ProductBatchesDialog({
         toast.success("Batch added successfully");
         setView("list");
       },
-      onError: (err: any) => toast.error(err.message || "Failed to add batch"),
+      onError: (error) => toast.error(normalizeApiError(error).message),
     });
   };
 
   const handleAdjustSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedBatch) return;
     adjustBatch.mutate({ id: selectedBatch.id, data: adjustForm }, {
       onSuccess: () => {
         toast.success("Batch adjusted successfully");
         setView("list");
       },
-      onError: (err: any) => toast.error(err.message || "Failed to adjust batch"),
+      onError: (error) => toast.error(normalizeApiError(error).message),
     });
   };
 
@@ -77,7 +80,7 @@ export function ProductBatchesDialog({
     if (window.confirm("Are you sure you want to delete this batch?")) {
       deleteBatch.mutate(id, {
         onSuccess: () => toast.success("Batch deleted successfully"),
-        onError: (err: any) => toast.error(err.message || "Failed to delete batch"),
+        onError: (error) => toast.error(normalizeApiError(error).message),
       });
     }
   };
@@ -116,7 +119,7 @@ export function ProductBatchesDialog({
                 {product.batches?.length === 0 && (
                   <TR><TD colSpan={6} className="text-center py-4">No batches found.</TD></TR>
                 )}
-                {product.batches?.map((b: any) => (
+                {product.batches?.map((b) => (
                   <TR key={b.id}>
                     <TD className="font-medium">{b.batchNumber}</TD>
                     <TD>{new Date(b.expiryDate).toLocaleDateString()}</TD>
@@ -162,6 +165,10 @@ export function ProductBatchesDialog({
                 <Input required type="number" min="0" step="0.01" value={addForm.purchaseCost} onChange={e => setAddForm({...addForm, purchaseCost: parseFloat(e.target.value) || 0})} />
               </div>
               <div className="space-y-2">
+                <label className="text-sm font-medium">POS Selling Price (per unit)</label>
+                <Input required type="number" min="0.01" step="0.01" value={addForm.sellingPrice} onChange={e => setAddForm({...addForm, sellingPrice: parseFloat(e.target.value) || 0})} />
+              </div>
+              <div className="space-y-2">
                 <label className="text-sm font-medium">Low Stock Alert Threshold</label>
                 <Input type="number" min="0" value={addForm.minStock} onChange={e => setAddForm({...addForm, minStock: parseInt(e.target.value) || 0})} />
               </div>
@@ -197,7 +204,7 @@ export function ProductBatchesDialog({
                 <select 
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   value={adjustForm.type} 
-                  onChange={e => setAdjustForm({...adjustForm, type: e.target.value})}
+                  onChange={e => setAdjustForm({...adjustForm, type: e.target.value as InventoryAdjustmentType})}
                 >
                   <option value="MANUAL_ADJUSTMENT">Manual Adjustment</option>
                   <option value="DAMAGED">Damaged</option>
@@ -240,7 +247,7 @@ export function ProductBatchesDialog({
                 {!loadingMovements && movements?.length === 0 && (
                   <TR><TD colSpan={5} className="text-center py-4">No movements recorded.</TD></TR>
                 )}
-                {!loadingMovements && movements?.map((m: any) => (
+                {!loadingMovements && movements?.map((m) => (
                   <TR key={m.id}>
                     <TD>{new Date(m.occurredAt).toLocaleString()}</TD>
                     <TD>

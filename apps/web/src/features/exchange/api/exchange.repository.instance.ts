@@ -1,5 +1,4 @@
 import type { ExchangeRepository } from "./exchange.repository";
-import { exchangeMockRepository } from "./exchange.mock-repository";
 
 /**
  * TODO(backend): swap for `exchange.http-repository.ts` once the
@@ -7,4 +6,17 @@ import { exchangeMockRepository } from "./exchange.mock-repository";
  * moderation) exist. Reservation/oversell conflict handling from the API
  * will need surfacing in `createListing`/a future `purchaseListing` call.
  */
-export const exchangeRepository: ExchangeRepository = exchangeMockRepository;
+const unavailableMessage =
+  "The exchange workflow is not available until browse, purchase, fulfillment, and stock-transfer APIs are complete.";
+
+export const exchangeRepository: ExchangeRepository = {
+  async listListings() {
+    return [];
+  },
+  async getListing() {
+    return undefined;
+  },
+  async createListing() {
+    throw new Error(unavailableMessage);
+  },
+};

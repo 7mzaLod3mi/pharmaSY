@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { supplierNav } from "@/lib/nav-config";
 import { PageHeader } from "@/components/shared/page-header";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +20,7 @@ import { Loader2, ArrowLeft, Printer } from "lucide-react";
 import { useSupplierOrderDetails, useUpdateSupplierOrderStatus } from "@/features/supplier-orders/hooks/use-supplier-orders";
 import { nextSupplierOrderStatus, type SupplierOrderStatus } from "@/features/supplier-orders/api/supplier-orders.types";
 import Link from "next/link";
+import { normalizeApiError } from "@/lib/http-client";
 
 const statusVariant: Record<SupplierOrderStatus, "info" | "brand" | "success" | "danger" | "warning"> = {
   pending: "warning",
@@ -84,8 +85,14 @@ export default function SupplierOrderDetailsPage({ params }: { params: Promise<{
             {next && (
               <Button
                 onClick={() => {
-                  updateStatus.mutate({ id: order.id, status: next });
-                  toast.success(`Order marked as ${next}`);
+                  updateStatus.mutate(
+                    { id: order.id, status: next },
+                    {
+                      onSuccess: () => toast.success(`Order marked as ${next}`),
+                      onError: (error) =>
+                        toast.error(normalizeApiError(error).message),
+                    }
+                  );
                 }}
                 disabled={updateStatus.isPending}
               >
@@ -113,19 +120,24 @@ export default function SupplierOrderDetailsPage({ params }: { params: Promise<{
                   </TR>
                 </THead>
                 <TBody>
-                  {order.items?.map((item: any) => (
+                  {order.items?.map((item) => {
+                    const product =
+                      item.supplierProduct?.product ??
+                      item.marketplaceOffer?.product;
+                    return (
                     <TR key={item.id}>
                       <TD>
-                        <div className="font-medium">{item.productNameAr || "Product"}</div>
-                        <div className="text-xs text-muted-foreground">{item.productNameEn}</div>
+                        <div className="font-medium">{product?.tradeNameAr || "Product"}</div>
+                        <div className="text-xs text-muted-foreground">{product?.tradeNameEn}</div>
                       </TD>
-                      <TD>${Number(item.price).toFixed(2)}</TD>
+                      <TD>${Number(item.unitPrice).toFixed(2)}</TD>
                       <TD>{item.quantity}</TD>
                       <TD className="text-right font-medium">
-                        ${(Number(item.price) * item.quantity).toFixed(2)}
+                        ${Number(item.subtotal).toFixed(2)}
                       </TD>
                     </TR>
-                  ))}
+                    );
+                  })}
                   <TR>
                     <TD colSpan={3} className="text-right font-medium">
                       Subtotal
@@ -165,7 +177,7 @@ export default function SupplierOrderDetailsPage({ params }: { params: Promise<{
               </div>
               <div>
                 <p className="text-muted-foreground">Contact</p>
-                <p>{order.pharmacy?.contactEmail || "N/A"}</p>
+                <p>{order.pharmacy?.phone || "N/A"}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Address</p>

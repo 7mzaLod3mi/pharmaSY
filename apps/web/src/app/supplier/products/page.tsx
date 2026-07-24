@@ -13,7 +13,14 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Plus, UploadCloud, Power, PackageX } from "lucide-react";
 import { ProductDialog } from "@/features/supplier-products/components/product-dialog";
-import { useSupplierProducts, useRemoveSupplierProduct, useUpsertSupplierProduct } from "@/features/supplier-products/hooks/use-supplier-products";
+import {
+  useSupplierProducts,
+  useRemoveSupplierProduct,
+  useToggleSupplierProductAvailability,
+} from "@/features/supplier-products/hooks/use-supplier-products";
+import type { SupplierProduct } from "@/features/supplier-products/api/supplier-products.types";
+import Link from "next/link";
+import { normalizeApiError } from "@/lib/http-client";
 
 const statusVariant = {
   active: { label: "Active", variant: "success" as const },
@@ -24,14 +31,15 @@ const statusVariant = {
 export default function SupplierProductsPage() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedProduct, setSelectedProduct] = useState<SupplierProduct | null>(null);
   
   const { data: products, isLoading } = useSupplierProducts({ search });
   const removeProduct = useRemoveSupplierProduct();
+  const toggleAvailability = useToggleSupplierProductAvailability();
 
   const filteredProducts = products || [];
 
-  const handleEdit = (product: any) => {
+  const handleEdit = (product: SupplierProduct) => {
     setSelectedProduct(product);
     setDialogOpen(true);
   };
@@ -42,14 +50,16 @@ export default function SupplierProductsPage() {
   };
 
   return (
-    <DashboardShell sections={supplierNav} roleLabel="Supplier" userName="Omar Nasser">
+    <DashboardShell sections={supplierNav} roleLabel="Supplier" userName="Supplier">
       <PageHeader
         title="Products"
         description="Manage your catalog listed on the PharmaSY marketplace."
         actions={
           <>
-            <Button variant="secondary">
+            <Button variant="secondary" asChild>
+              <Link href="/supplier/products/import">
               <UploadCloud className="size-4" /> Import Excel
+              </Link>
             </Button>
             <Button onClick={handleAdd}>
               <Plus className="size-4" /> Add product
@@ -78,6 +88,7 @@ export default function SupplierProductsPage() {
               <TH>Product</TH>
               <TH>Category</TH>
               <TH>Price</TH>
+              <TH>Stock</TH>
               <TH>MOQ</TH>
               <TH>Status</TH>
               <TH></TH>
@@ -87,7 +98,7 @@ export default function SupplierProductsPage() {
             {isLoading &&
               Array.from({ length: 4 }).map((_, i) => (
                 <TR key={i}>
-                  <TD colSpan={7}>
+                  <TD colSpan={8}>
                     <Skeleton className="h-5 w-full" />
                   </TD>
                 </TR>
@@ -95,7 +106,7 @@ export default function SupplierProductsPage() {
 
             {!isLoading && filteredProducts?.length === 0 && (
               <TR>
-                <TD colSpan={7} className="py-10 text-center text-muted-foreground">
+                <TD colSpan={8} className="py-10 text-center text-muted-foreground">
                   <PackageX className="mx-auto mb-2 size-6 text-muted-foreground/60" />
                   No products match your search.
                 </TD>
@@ -103,12 +114,13 @@ export default function SupplierProductsPage() {
             )}
 
             {!isLoading &&
-              filteredProducts.map((p: any) => (
+              filteredProducts.map((p) => (
                 <TR key={p.id}>
                   <TD className="font-mono text-[12.5px] text-muted-foreground">{p.sku}</TD>
                   <TD className="font-medium">{p.name}</TD>
                   <TD className="text-muted-foreground">{p.category}</TD>
                   <TD>${p.price.toFixed(2)}</TD>
+                  <TD className="text-muted-foreground">{p.stock}</TD>
                   <TD className="text-muted-foreground">{p.moq}</TD>
                   <TD>
                     <Badge variant={statusVariant[p.status as keyof typeof statusVariant]?.variant || 'neutral'} dot>
@@ -131,7 +143,11 @@ export default function SupplierProductsPage() {
                         title={p.status !== 'inactive' ? "Mark Unavailable" : "Mark Available"}
                         onClick={() => {
                           if (window.confirm(`Are you sure you want to mark this product as ${p.status !== 'inactive' ? 'unavailable' : 'available'}?`)) {
-                            toast.info("Toggling availability...");
+                            toggleAvailability.mutate(p.id, {
+                              onSuccess: () => toast.success("Availability updated."),
+                              onError: (error) =>
+                                toast.error(normalizeApiError(error).message),
+                            });
                           }
                         }}
                       >
@@ -141,7 +157,9 @@ export default function SupplierProductsPage() {
                         onClick={() => {
                           if (window.confirm("Are you sure you want to remove this product?")) {
                             removeProduct.mutate(p.id, {
-                              onSuccess: () => toast.success("Product removed")
+                              onSuccess: () => toast.success("Product removed"),
+                              onError: (error) =>
+                                toast.error(normalizeApiError(error).message),
                             });
                           }
                         }}

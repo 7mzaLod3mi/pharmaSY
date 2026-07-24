@@ -3,6 +3,12 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Decimal } from '@prisma/client/runtime/library';
+import { Prisma } from '@prisma/client';
+
+interface QuantityDiscountTier {
+  minQuantity: number;
+  unitPrice: number;
+}
 
 export interface UpsertSupplierProductDto {
   productId: string;
@@ -12,6 +18,8 @@ export interface UpsertSupplierProductDto {
   expiryDate?: string;
   notes?: string;
   isAvailable?: boolean;
+  batchNumber?: string;
+  quantityDiscounts?: QuantityDiscountTier[];
 }
 
 export interface UpdateSupplierProductDto {
@@ -21,6 +29,8 @@ export interface UpdateSupplierProductDto {
   expiryDate?: string;
   notes?: string;
   isAvailable?: boolean;
+  batchNumber?: string;
+  quantityDiscounts?: QuantityDiscountTier[];
 }
 
 export interface SupplierProductsQuery {
@@ -39,7 +49,7 @@ export class SupplierProductsService {
     const limit = Math.min(100, Math.max(1, query.limit || 20));
     const skip = (page - 1) * limit;
 
-    const where: any = { supplierId };
+    const where: Prisma.SupplierProductWhereInput = { supplierId };
     if (query.isAvailable !== undefined) where.isAvailable = query.isAvailable;
 
     const [data, total] = await Promise.all([
@@ -91,6 +101,10 @@ export class SupplierProductsService {
         expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : undefined,
         notes: dto.notes,
         isAvailable: dto.isAvailable ?? true,
+        batchNumber: dto.batchNumber,
+        quantityDiscounts: dto.quantityDiscounts as
+          | Prisma.InputJsonValue
+          | undefined,
       },
       update: {
         price: dto.price,
@@ -99,6 +113,10 @@ export class SupplierProductsService {
         expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : undefined,
         notes: dto.notes,
         isAvailable: dto.isAvailable,
+        batchNumber: dto.batchNumber,
+        quantityDiscounts: dto.quantityDiscounts as
+          | Prisma.InputJsonValue
+          | undefined,
       },
       include: { product: true },
     });
@@ -118,6 +136,13 @@ export class SupplierProductsService {
         ...(dto.expiryDate ? { expiryDate: new Date(dto.expiryDate) } : {}),
         ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
         ...(dto.isAvailable !== undefined ? { isAvailable: dto.isAvailable } : {}),
+        ...(dto.batchNumber !== undefined ? { batchNumber: dto.batchNumber } : {}),
+        ...(dto.quantityDiscounts !== undefined
+          ? {
+              quantityDiscounts:
+                dto.quantityDiscounts as unknown as Prisma.InputJsonValue,
+            }
+          : {}),
       },
       include: { product: true },
     });

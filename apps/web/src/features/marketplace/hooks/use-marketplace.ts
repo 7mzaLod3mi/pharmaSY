@@ -20,6 +20,14 @@ export function useMarketplaceProduct(id: string) {
   });
 }
 
+export function useMarketplaceProductOffers(productId: string) {
+  return useQuery({
+    queryKey: [...marketplaceQueryKeys.product(productId), "offers"],
+    queryFn: () => marketplaceRepository.listProductOffers(productId),
+    enabled: !!productId,
+  });
+}
+
 export function useMarketplaceCategories() {
   return useQuery({
     queryKey: marketplaceQueryKeys.categories(),

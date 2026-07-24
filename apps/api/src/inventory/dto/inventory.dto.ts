@@ -26,6 +26,11 @@ export class CreateInventoryBatchDto {
   purchaseCost: number;
 
   @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  sellingPrice?: number;
+
+  @IsOptional()
   @IsString()
   supplierId?: string;
 

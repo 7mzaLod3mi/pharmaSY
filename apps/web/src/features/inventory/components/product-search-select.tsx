@@ -1,22 +1,19 @@
 import { useState, useEffect } from "react";
-import { Check, ChevronsUpDown, Search } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Check, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+
+interface CatalogProduct {
+  id: string;
+  tradeNameAr: string;
+  tradeNameEn: string;
+  barcode?: string | null;
+}
+
+interface CatalogProductsResponse {
+  data: CatalogProduct[];
+}
 
 interface ProductSearchSelectProps {
   value?: string;
@@ -25,7 +22,6 @@ interface ProductSearchSelectProps {
 }
 
 export function ProductSearchSelect({ value, onChange, placeholder = "Search master catalog..." }: ProductSearchSelectProps) {
-  const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -38,67 +34,61 @@ export function ProductSearchSelect({ value, onChange, placeholder = "Search mas
     queryKey: ['products', 'search', debouncedSearch],
     queryFn: async () => {
       if (!debouncedSearch) return { data: [] };
-      const res = await apiClient.get('/products', { params: { search: debouncedSearch, limit: 10 } });
+      const res = await apiClient.get<CatalogProductsResponse>('/products', { params: { search: debouncedSearch, limit: 10 } });
       return res.data;
     },
     enabled: true,
   });
 
   const products = data?.data || [];
-  const selectedProduct = products.find((p: any) => p.id === value) || (value ? { id: value, tradeNameEn: 'Selected Product' } : null);
+  const selectedProduct = products.find((product) => product.id === value) || (value ? { id: value, tradeNameEn: 'Selected Product', tradeNameAr: '' } : null);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between"
-        >
-          {selectedProduct ? (
-            <span className="truncate">{selectedProduct.tradeNameEn || selectedProduct.tradeNameAr}</span>
+    <div className="relative space-y-2">
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          aria-label={placeholder}
+          className="pl-9"
+          placeholder={placeholder}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      </div>
+      {selectedProduct && !search ? (
+        <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+          {selectedProduct.tradeNameEn || selectedProduct.tradeNameAr}
+        </div>
+      ) : null}
+      {search ? (
+        <div className="max-h-48 overflow-y-auto rounded-lg border border-border bg-background p-1 shadow-sm">
+          {isLoading ? (
+            <p className="p-3 text-sm text-muted-foreground">Searching...</p>
+          ) : products.length === 0 ? (
+            <p className="p-3 text-sm text-muted-foreground">No product found.</p>
           ) : (
-            <span className="text-muted-foreground truncate">{placeholder}</span>
+            products.map((product) => (
+              <button
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-muted"
+                key={product.id}
+                type="button"
+                onClick={() => {
+                  onChange(product.id);
+                  setSearch("");
+                }}
+              >
+                <Check className={value === product.id ? "size-4 opacity-100" : "size-4 opacity-0"} />
+                <span className="flex min-w-0 flex-col">
+                  <span className="truncate">{product.tradeNameEn || product.tradeNameAr}</span>
+                  {product.barcode ? (
+                    <span className="text-xs text-muted-foreground">{product.barcode}</span>
+                  ) : null}
+                </span>
+              </button>
+            ))
           )}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0" align="start">
-        <Command shouldFilter={false}>
-          <CommandInput 
-            placeholder="Type a product name or barcode..." 
-            value={search}
-            onValueChange={setSearch}
-          />
-          <CommandList>
-            <CommandEmpty>{isLoading ? "Searching..." : "No product found."}</CommandEmpty>
-            <CommandGroup>
-              {products.map((product: any) => (
-                <CommandItem
-                  key={product.id}
-                  value={product.id}
-                  onSelect={(currentValue) => {
-                    onChange(currentValue);
-                    setOpen(false);
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === product.id ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  <div className="flex flex-col">
-                    <span>{product.tradeNameEn}</span>
-                    {product.barcode && <span className="text-xs text-muted-foreground">{product.barcode}</span>}
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+        </div>
+      ) : null}
+    </div>
   );
 }

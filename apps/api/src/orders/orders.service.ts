@@ -206,7 +206,15 @@ export class OrdersService {
       const isAuthorizedSeller =
         (sellerRole === UserRole.SUPPLIER && order.supplierId === sellerId) ||
         (sellerRole === UserRole.PHARMACY && order.sellerPharmacyId === sellerId);
-      if (!isAuthorizedSeller) throw new ForbiddenException('Access denied');
+      const isBuyerCancellation =
+        sellerRole === UserRole.PHARMACY &&
+        order.pharmacyId === sellerId &&
+        targetStatus === OrderStatus.CANCELLED &&
+        (order.status === OrderStatus.PENDING ||
+          order.status === OrderStatus.CONFIRMED);
+      if (!isAuthorizedSeller && !isBuyerCancellation) {
+        throw new ForbiddenException('Access denied');
+      }
       if (order.status === targetStatus) return order;
 
       if (!ORDER_TRANSITIONS[order.status].includes(targetStatus)) {

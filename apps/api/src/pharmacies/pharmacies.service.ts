@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrgStatus, UserStatus } from '@pharmasyn/types';
+import { AuditService } from '../audit/audit.service';
 
 export interface CreatePharmacyProfileDto {
   name: string;
@@ -27,7 +28,10 @@ export interface UpdatePharmacyProfileDto {
 
 @Injectable()
 export class PharmaciesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private audit: AuditService,
+  ) {}
 
   async createProfile(userId: string, data: CreatePharmacyProfileDto) {
     const user = await this.prisma.user.findUnique({
@@ -87,9 +91,25 @@ export class PharmaciesService {
     const pharmacy = await this.prisma.pharmacy.findUnique({ where: { userId } });
     if (!pharmacy) throw new NotFoundException('Pharmacy profile not found');
 
-    return this.prisma.pharmacy.update({
+    const updated = await this.prisma.pharmacy.update({
       where: { userId },
       data,
     });
+    await this.audit.log({
+      entityType: 'Pharmacy',
+      entityId: pharmacy.id,
+      action: 'UPDATE_PROFILE',
+      prevValues: {
+        name: pharmacy.name,
+        address: pharmacy.address,
+        city: pharmacy.city,
+        phone: pharmacy.phone,
+      },
+      newValues: { ...data },
+      userId,
+      orgId: pharmacy.id,
+      userRole: 'PHARMACY',
+    });
+    return updated;
   }
 }

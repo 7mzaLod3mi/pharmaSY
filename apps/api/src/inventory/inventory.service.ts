@@ -1,8 +1,14 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateInventoryBatchDto, AdjustStockDto } from './dto/inventory.dto';
 import { CommitInventoryImportDto, ImportConflictStrategy } from './dto/import.dto';
 import { MovementType, Prisma, ProductStatus } from '@prisma/client';
+import { createHash } from 'crypto';
 
 export interface FefoAllocation {
   inventoryId: string;
@@ -20,6 +26,15 @@ export interface InventoryMovementReference {
   saleId?: string;
   saleReturnId?: string;
   reason?: string;
+}
+
+export interface InventoryImportResult {
+  totalRows: number;
+  createdRows: number;
+  updatedRows: number;
+  skippedRows: number;
+  failedRows: number;
+  errors: Array<{ rowId: string; message: string }>;
 }
 
 @Injectable()
@@ -124,6 +139,7 @@ export class InventoryService {
       const data = {
         expiryDate: new Date(dto.expiryDate),
         purchaseCost: dto.purchaseCost,
+        sellingPrice: dto.sellingPrice,
         supplierId: dto.supplierId,
         supplierName: dto.supplierName,
         quantity: dto.quantity,
@@ -399,7 +415,38 @@ export class InventoryService {
   }
 
   async commitImport(pharmacyId: string, userId: string, dto: CommitInventoryImportDto) {
-    return this.prisma.$transaction(async (tx) => {
+    const requestHash = createHash('sha256')
+      .update(JSON.stringify(dto))
+      .digest('hex');
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+      const replay = await tx.inventoryImportMutation.findUnique({
+        where: {
+          pharmacyId_clientMutationId: {
+            pharmacyId,
+            clientMutationId: dto.clientMutationId,
+          },
+        },
+      });
+      if (replay) {
+        if (replay.requestHash !== requestHash) {
+          throw new ConflictException(
+            'clientMutationId was already used with a different inventory import',
+          );
+        }
+        return replay.result as unknown as InventoryImportResult;
+      }
+      await tx.inventoryImportMutation.create({
+        data: {
+          pharmacyId,
+          userId,
+          clientMutationId: dto.clientMutationId,
+          requestHash,
+          result: { status: 'PROCESSING' },
+        },
+      });
+
       // Idempotency check: if clientMutationId was already used for an import recently
       if (dto.importId) {
         const existingImport = await tx.productImport.findFirst({
@@ -410,7 +457,7 @@ export class InventoryService {
         }
       }
       
-      const results = {
+      const results: InventoryImportResult = {
         totalRows: dto.rows.length,
         createdRows: 0,
         updatedRows: 0,
@@ -434,7 +481,7 @@ export class InventoryService {
             continue;
           }
 
-          const batchNumber = row.batchNumber || `IMP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+          const batchNumber = row.batchNumber.trim();
 
           const existingBatch = await tx.inventory.findUnique({
             where: { pharmacyId_productId_batchNumber: { pharmacyId, productId: row.productId, batchNumber } }
@@ -456,7 +503,7 @@ export class InventoryService {
                 quantity: newQuantity,
                 purchaseCost: row.purchaseCost,
                 sellingPrice: row.sellingPrice ?? existingBatch.sellingPrice,
-                expiryDate: row.expiryDate ? new Date(row.expiryDate) : existingBatch.expiryDate,
+                expiryDate: new Date(row.expiryDate),
                 minStock: row.minStock ?? existingBatch.minStock,
                 location: row.location ?? existingBatch.location,
                 supplierReference: row.supplierReference ?? existingBatch.supplierReference,
@@ -489,7 +536,7 @@ export class InventoryService {
                 pharmacyId,
                 productId: row.productId,
                 batchNumber,
-                expiryDate: row.expiryDate ? new Date(row.expiryDate) : new Date(new Date().setFullYear(new Date().getFullYear() + 2)), // Default to 2 years if unknown
+                expiryDate: new Date(row.expiryDate),
                 purchaseCost: row.purchaseCost,
                 sellingPrice: row.sellingPrice,
                 quantity: row.quantity,
@@ -519,9 +566,15 @@ export class InventoryService {
             }
             results.createdRows++;
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
           results.failedRows++;
-          results.errors.push({ rowId: row.rowId, message: error.message || 'Unknown error during commit' });
+          results.errors.push({
+            rowId: row.rowId,
+            message:
+              error instanceof Error
+                ? error.message
+                : 'Unknown error during commit',
+          });
         }
       }
 
@@ -534,14 +587,48 @@ export class InventoryService {
             updatedRows: results.updatedRows,
             skippedRows: results.skippedRows,
             failedRows: results.failedRows,
-            errors: results.errors as any,
+            errors: results.errors as Prisma.InputJsonValue,
             processedAt: new Date()
           }
         });
       }
 
+      await tx.inventoryImportMutation.update({
+        where: {
+          pharmacyId_clientMutationId: {
+            pharmacyId,
+            clientMutationId: dto.clientMutationId,
+          },
+        },
+        data: { result: results as unknown as Prisma.InputJsonValue },
+      });
+
       return results;
-    });
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const replay = await this.prisma.inventoryImportMutation.findUnique({
+          where: {
+            pharmacyId_clientMutationId: {
+              pharmacyId,
+              clientMutationId: dto.clientMutationId,
+            },
+          },
+        });
+        if (replay) {
+          if (replay.requestHash !== requestHash) {
+            throw new ConflictException(
+              'clientMutationId was already used with a different inventory import',
+            );
+          }
+          return replay.result as unknown as InventoryImportResult;
+        }
+      }
+      throw error;
+    }
   }
 
   // ─── ADJUST STOCK ──────────────────────────────────────────────────────────────────

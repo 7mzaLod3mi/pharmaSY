@@ -2,7 +2,7 @@ import {
   Controller, Get, Post, Patch, Param, Body, HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { IsString, IsOptional, MinLength } from 'class-validator';
+import { IsString, IsOptional, IsUUID, MinLength } from 'class-validator';
 import { ProductRequestsService } from './product-requests.service';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -42,8 +42,20 @@ export class CreateProductRequestDto {
 }
 
 export class ApproveRequestDto {
-  @IsString()
-  categoryId: string; // The admin must assign it to a category
+  @IsUUID()
+  categoryId: string;
+
+  @IsString() @MinLength(2)
+  tradeNameAr: string;
+
+  @IsString() @MinLength(2)
+  tradeNameEn: string;
+
+  @IsString() @MinLength(1)
+  unit: string;
+
+  @IsOptional() @IsUUID()
+  manufacturerId?: string;
 }
 
 export class RejectRequestDto {
@@ -52,7 +64,7 @@ export class RejectRequestDto {
 }
 
 export class MergeRequestDto {
-  @IsString()
+  @IsUUID()
   productId: string;
 }
 
@@ -86,20 +98,28 @@ export class ProductRequestsController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Approve request and create master product' })
   approve(@Param('id') id: string, @Body() dto: ApproveRequestDto, @CurrentUser() user: JwtPayload) {
-    return this.service.approve(id, user.sub, dto.categoryId);
+    return this.service.approve(id, user.sub, dto);
   }
 
   @Patch(':id/reject')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Reject product request' })
-  reject(@Param('id') id: string, @Body() dto: RejectRequestDto) {
-    return this.service.reject(id, dto.reason);
+  reject(
+    @Param('id') id: string,
+    @Body() dto: RejectRequestDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.service.reject(id, dto.reason, user.sub);
   }
 
   @Patch(':id/merge')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Merge request with existing master product' })
-  merge(@Param('id') id: string, @Body() dto: MergeRequestDto) {
-    return this.service.merge(id, dto.productId);
+  merge(
+    @Param('id') id: string,
+    @Body() dto: MergeRequestDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.service.merge(id, dto.productId, user.sub);
   }
 }

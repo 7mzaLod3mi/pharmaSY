@@ -10,9 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Eye, PackageX, ReceiptText } from "lucide-react";
+import { Search, Eye, ReceiptText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { usePosSales } from "@/features/pos/hooks/use-pos";
+import type { PosSale } from "@/features/pos/api/pos.types";
 
 export default function PosHistoryPage() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export default function PosHistoryPage() {
   
   const { data: sales, isLoading } = usePosSales();
 
-  const filteredSales = sales?.filter((s: any) => 
+  const filteredSales = sales?.filter((s: PosSale) =>
     s.id.toLowerCase().includes(search.toLowerCase()) || 
     (s.customerName && s.customerName.toLowerCase().includes(search.toLowerCase()))
   ) || [];
@@ -76,7 +77,7 @@ export default function PosHistoryPage() {
             )}
 
             {!isLoading &&
-              filteredSales.map((s: any) => (
+              filteredSales.map((s: PosSale) => (
                 <TR 
                   key={s.id}
                   className="cursor-pointer hover:bg-muted/50 transition-colors"

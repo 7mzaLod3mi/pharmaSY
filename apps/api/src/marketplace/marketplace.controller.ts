@@ -1,17 +1,44 @@
-import { Controller, Get, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Controller, Get, Param, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { MarketplaceService } from './marketplace.service';
-import { Public } from '../common/decorators/public.decorator';
+import { Roles } from '../common/decorators/roles.decorator';
+import { UserRole } from '@pharmasyn/types';
+import { RequirePermissions } from '../common/decorators/permissions.decorator';
+import { Permissions } from '../common/permissions';
 
 @ApiTags('marketplace')
+@ApiBearerAuth()
+@Roles(UserRole.PHARMACY)
+@RequirePermissions(Permissions.PRODUCTS_READ)
 @Controller({ path: 'marketplace', version: '1' })
 export class MarketplaceController {
   constructor(private marketplaceService: MarketplaceService) {}
 
-  @Public()
+  @Get('products/:productId')
+  @ApiOperation({ summary: 'Compare all active offers for one master product' })
+  productOffers(@Param('productId') productId: string) {
+    return this.marketplaceService.searchProducts(
+      undefined,
+      undefined,
+      100,
+      productId,
+    );
+  }
+
   @Get('products')
   @ApiOperation({ summary: 'Search active supplier products' })
-  searchProducts(@Query('q') query?: string) {
-    return this.marketplaceService.searchProducts(query);
+  @ApiQuery({ name: 'q', required: false })
+  @ApiQuery({ name: 'categoryId', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  searchProducts(
+    @Query('q') query?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.marketplaceService.searchProducts(
+      query,
+      categoryId,
+      limit ? Number(limit) : 50,
+    );
   }
 }

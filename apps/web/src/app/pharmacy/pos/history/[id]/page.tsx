@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
@@ -10,14 +10,54 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, ArrowLeft, Printer, Ban, RotateCcw } from "lucide-react";
 import { usePosSale, useCancelSale, useCreateSaleReturn } from "@/features/pos/hooks/use-pos";
+import { getOrCreateDeviceId } from "@/lib/device-id";
+import { normalizeApiError } from "@/lib/http-client";
+import type {
+  PosPaymentDto,
+  PosSale,
+  PosSaleItem,
+} from "@/features/pos/api/pos.types";
+
+function buildRefundPlan(sale: PosSale, amount: number): PosPaymentDto[] {
+  let remaining = Math.max(0, amount);
+  const refunds: PosPaymentDto[] = [];
+  for (const payment of sale.payments.filter(
+    (candidate) => candidate.type !== "REFUND"
+  )) {
+    if (remaining <= 0) break;
+    const available = Number(payment.amount);
+    const applied = Math.min(available, remaining);
+    if (applied > 0) {
+      refunds.push({
+        method: payment.method,
+        amount: Number(applied.toFixed(2)),
+        reference: payment.reference ?? undefined,
+      });
+      remaining = Number((remaining - applied).toFixed(2));
+    }
+  }
+  return refunds;
+}
+
+function returnItemValue(item: PosSaleItem, quantity: number) {
+  const remainingQuantity = item.quantity - (item.returnedQuantity ?? 0);
+  if (remainingQuantity <= 0 || quantity <= 0) return 0;
+  const remainingValue = Number(item.netAmount) - Number(item.returnedAmount ?? 0);
+  return remainingValue * (quantity / remainingQuantity);
+}
 
 export default function PosSaleDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: sale, isLoading } = usePosSale(id);
   const cancelSale = useCancelSale();
   const returnSale = useCreateSaleReturn();
+  const [returnOpen, setReturnOpen] = useState(false);
+  const [returnReason, setReturnReason] = useState("");
+  const [returnQuantities, setReturnQuantities] = useState<Record<string, number>>({});
 
   if (isLoading) {
     return (
@@ -38,36 +78,77 @@ export default function PosSaleDetailsPage({ params }: { params: Promise<{ id: s
   }
 
   const canCancel = sale.status === "COMPLETED";
-  const canReturn = sale.status === "COMPLETED"; // Ideally, checking if items haven't been returned already
+  const canReturn =
+    sale.status === "COMPLETED" || sale.status === "PARTIALLY_RETURNED";
 
   const handleCancel = () => {
-    if (window.confirm("Are you sure you want to completely cancel this sale? This action cannot be undone.")) {
+    const reason = window.prompt("Cancellation reason (required):")?.trim();
+    if (reason && reason.length >= 3) {
+      const refundable = Math.max(
+        0,
+        Number(sale.paidAmount) - Number(sale.refundedAmount ?? 0)
+      );
       cancelSale.mutate({ id, dto: { 
-        reason: "Cancelled by pharmacy staff",
+        reason,
+        refunds: buildRefundPlan(sale, refundable),
         clientMutationId: crypto.randomUUID(),
-        deviceId: "pos-terminal-1"
+        deviceId: getOrCreateDeviceId(),
+        clientCreatedAt: new Date().toISOString(),
       } }, {
         onSuccess: () => toast.success("Sale cancelled successfully"),
-        onError: (err: any) => toast.error(err.response?.data?.message || err.message || "Failed to cancel sale"),
+        onError: (error: unknown) =>
+          toast.error(normalizeApiError(error).message),
       });
     }
   };
 
-  const handleReturnAll = () => {
-    if (window.confirm("Process a full return for this sale?")) {
+  const handleReturn = () => {
+    const reason = returnReason.trim();
+    const items = sale.items
+      .map((item) => ({
+        saleItemId: item.id,
+        quantity: returnQuantities[item.id] ?? 0,
+      }))
+      .filter((item) => item.quantity > 0);
+    if (reason.length < 3) {
+      toast.error("Return reason must contain at least 3 characters.");
+      return;
+    }
+    if (items.length === 0) {
+      toast.error("Select at least one quantity to return.");
+      return;
+    }
+    const returnAmount = sale.items.reduce(
+      (sum, item) => sum + returnItemValue(item, returnQuantities[item.id] ?? 0),
+      0
+    );
+      const refundableBalance = Math.max(
+        0,
+        Number(sale.paidAmount) - Number(sale.refundedAmount ?? 0)
+      );
       returnSale.mutate({ 
         id, 
         dto: { 
-          items: sale.items.map((i: any) => ({ saleItemId: i.id, quantity: i.quantity })),
-          reason: "Full return",
+          items,
+          reason,
+          refunds: buildRefundPlan(
+            sale,
+            Math.min(returnAmount, refundableBalance)
+          ),
           clientMutationId: crypto.randomUUID(),
-          deviceId: "pos-terminal-1"
+          deviceId: getOrCreateDeviceId(),
+          clientCreatedAt: new Date().toISOString(),
         } 
       }, {
-        onSuccess: () => toast.success("Return processed successfully"),
-        onError: (err: any) => toast.error(err.response?.data?.message || err.message || "Failed to process return"),
+        onSuccess: () => {
+          toast.success("Return processed successfully");
+          setReturnOpen(false);
+          setReturnReason("");
+          setReturnQuantities({});
+        },
+        onError: (error: unknown) =>
+          toast.error(normalizeApiError(error).message),
       });
-    }
   };
 
   return (
@@ -89,11 +170,15 @@ export default function PosSaleDetailsPage({ params }: { params: Promise<{ id: s
             {canReturn && (
               <Button 
                 variant="outline" 
-                onClick={handleReturnAll}
+                onClick={() => {
+                  setReturnQuantities({});
+                  setReturnReason("");
+                  setReturnOpen(true);
+                }}
                 disabled={returnSale.isPending}
               >
                 {returnSale.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <RotateCcw className="mr-2 size-4" />}
-                Full Return
+                Return Items
               </Button>
             )}
             {canCancel && (
@@ -128,10 +213,12 @@ export default function PosSaleDetailsPage({ params }: { params: Promise<{ id: s
                   </TR>
                 </THead>
                 <TBody>
-                  {sale.items?.map((item: any) => (
+                  {sale.items?.map((item) => (
                     <TR key={item.id}>
                       <TD>
-                        <div className="font-medium">{item.productName || "Product"}</div>
+                        <div className="font-medium">
+                          {item.productNameEn || item.productNameAr}
+                        </div>
                       </TD>
                       <TD>{item.quantity}</TD>
                       <TD>${Number(item.unitPrice).toFixed(2)}</TD>
@@ -142,13 +229,13 @@ export default function PosSaleDetailsPage({ params }: { params: Promise<{ id: s
                     </TR>
                   ))}
                   
-                  {Number(sale.globalDiscountAmount) > 0 && (
+                  {Number(sale.discountAmount) > 0 && (
                     <TR>
                       <TD colSpan={4} className="text-right font-medium text-muted-foreground">
                         Global Discount
                       </TD>
                       <TD className="text-right text-danger-600">
-                        -${Number(sale.globalDiscountAmount).toFixed(2)}
+                        -${Number(sale.discountAmount).toFixed(2)}
                       </TD>
                     </TR>
                   )}
@@ -210,7 +297,7 @@ export default function PosSaleDetailsPage({ params }: { params: Promise<{ id: s
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
-                  {sale.payments.map((p: any) => (
+                  {sale.payments.map((p) => (
                     <li key={p.id} className="flex justify-between text-sm">
                       <span className="font-medium flex items-center gap-2">
                         <Badge variant="neutral">{p.method}</Badge>
@@ -224,6 +311,61 @@ export default function PosSaleDetailsPage({ params }: { params: Promise<{ id: s
           )}
         </div>
       </div>
+
+      <Dialog open={returnOpen} onOpenChange={setReturnOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Return sale items</DialogTitle>
+            <DialogDescription>
+              Choose the exact quantities. Returned stock is restored to the original FEFO batches by the server.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[50vh] space-y-3 overflow-y-auto">
+            {sale.items.map((item) => {
+              const remaining = item.quantity - (item.returnedQuantity ?? 0);
+              return (
+                <div key={item.id} className="grid grid-cols-[1fr_120px] items-center gap-4 rounded-lg border border-border p-3">
+                  <div>
+                    <p className="font-medium">{item.productNameEn || item.productNameAr}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {remaining} of {item.quantity} eligible for return
+                    </p>
+                  </div>
+                  <Input
+                    aria-label={`Return quantity for ${item.productNameEn || item.productNameAr}`}
+                    type="number"
+                    min={0}
+                    max={remaining}
+                    disabled={remaining === 0}
+                    value={returnQuantities[item.id] ?? 0}
+                    onChange={(event) => {
+                      const value = Math.min(remaining, Math.max(0, Number.parseInt(event.target.value, 10) || 0));
+                      setReturnQuantities((current) => ({ ...current, [item.id]: value }));
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium" htmlFor="return-reason">Return reason</label>
+            <textarea
+              id="return-reason"
+              className="min-h-20 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+              value={returnReason}
+              onChange={(event) => setReturnReason(event.target.value)}
+              placeholder="Required for the audit trail"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setReturnOpen(false)}>Close</Button>
+            <Button onClick={handleReturn} disabled={returnSale.isPending}>
+              {returnSale.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Confirm return
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardShell>
   );
 }

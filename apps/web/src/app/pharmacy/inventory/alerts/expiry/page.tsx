@@ -43,7 +43,7 @@ export default function ExpiryAlertsPage() {
               ) : !alerts || alerts.length === 0 ? (
                 <TR><TD colSpan={5} className="text-center py-6 text-muted-foreground">No expiring batches found.</TD></TR>
               ) : (
-                alerts.map((batch: any) => {
+                alerts.map((batch) => {
                   const status = getStatus(batch.expiryDate);
                   return (
                     <TR key={batch.id}>

@@ -6,5 +6,5 @@ export interface ApprovalRequest {
   type: ApprovalOrgType;
   submittedAt: string; // ISO date
   contactEmail: string;
-  documents: string[];
+  documents: Array<{ label: string; url: string }>;
 }

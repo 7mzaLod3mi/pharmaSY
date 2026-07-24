@@ -14,7 +14,7 @@
 export const featureFlags = {
   offlineSync: false,
   advancedReports: false,
-  exchangeMarketplace: true,
+  exchangeMarketplace: false,
   aiAssistant: false,
   aiRecommendations: false,
   demandForecasting: false,
@@ -52,7 +52,7 @@ export const featureIntegrationStatus: Record<string, FeatureIntegrationStatus> 
   marketplace: "implemented",
   orders: "implemented",
   inventory: "implemented",
-  exchange: "mock-backed",
+  exchange: "feature-flagged",
   notifications: "implemented",
   supplierProducts: "implemented",
   adminApprovals: "implemented",

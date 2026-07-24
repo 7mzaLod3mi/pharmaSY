@@ -8,7 +8,6 @@ import {
   Boxes,
   ArrowLeftRight,
   AlertTriangle,
-  Heart,
   Bell,
   Settings,
   Users,
@@ -17,7 +16,6 @@ import {
   ShieldCheck,
   ClipboardList,
   UploadCloud,
-  Recycle,
   Receipt,
 } from "lucide-react";
 import type { NavSection } from "@/components/layout/sidebar";
@@ -25,97 +23,87 @@ import type { NavSection } from "@/components/layout/sidebar";
 export const pharmacyNav: NavSection[] = [
   {
     items: [
-      { label: "Dashboard", href: "/pharmacy/dashboard", icon: LayoutGrid },
-      { label: "Point of Sale", href: "/pharmacy/pos", icon: Receipt },
+      { label: "workspace.dashboard", href: "/pharmacy/dashboard", icon: LayoutGrid },
+      { label: "workspace.pos", href: "/pharmacy/pos", icon: Receipt },
     ],
   },
   {
-    title: "Buy",
+    title: "workspace.buy",
     items: [
-      { label: "Marketplace", href: "/pharmacy/marketplace", icon: Store },
-      { label: "Products", href: "/pharmacy/products", icon: Package },
-      { label: "Categories", href: "/pharmacy/categories", icon: Tags },
-      { label: "Manufacturers", href: "/pharmacy/manufacturers", icon: Factory },
-      { label: "Cart", href: "/pharmacy/cart", icon: ShoppingCart },
+      { label: "workspace.marketplace", href: "/pharmacy/marketplace", icon: Store },
+      { label: "workspace.cart", href: "/pharmacy/cart", icon: ShoppingCart },
     ],
   },
   {
-    title: "Operations",
+    title: "workspace.operations",
     items: [
-      { label: "Orders", href: "/pharmacy/orders", icon: ClipboardList },
-      { label: "Inventory", href: "/pharmacy/inventory", icon: Boxes },
-      { label: "Movements", href: "/pharmacy/inventory/movements", icon: ArrowLeftRight },
-      { label: "Low stock", href: "/pharmacy/inventory/alerts/low-stock", icon: AlertTriangle },
-      { label: "Expiry alerts", href: "/pharmacy/inventory/alerts/expiry", icon: AlertTriangle, badge: "5" },
-      { label: "Setup & Import", href: "/pharmacy/setup", icon: UploadCloud },
-      { label: "Reports", href: "/pharmacy/reports", icon: FileBarChart },
-      { label: "Exchange", href: "/pharmacy/exchange", icon: Recycle },
-      { label: "Favorites", href: "/pharmacy/favorites", icon: Heart },
+      { label: "workspace.orders", href: "/pharmacy/orders", icon: ClipboardList },
+      { label: "workspace.inventory", href: "/pharmacy/inventory", icon: Boxes },
+      { label: "workspace.movements", href: "/pharmacy/inventory/movements", icon: ArrowLeftRight },
+      { label: "workspace.lowStock", href: "/pharmacy/inventory/alerts/low-stock", icon: AlertTriangle },
+      { label: "workspace.expiry", href: "/pharmacy/inventory/alerts/expiry", icon: AlertTriangle },
+      { label: "workspace.setupImport", href: "/pharmacy/setup", icon: UploadCloud },
+      { label: "workspace.reports", href: "/pharmacy/reports", icon: FileBarChart },
     ],
   },
   {
-    title: "Account",
+    title: "workspace.account",
     items: [
-      { label: "Notifications", href: "/notifications", icon: Bell },
-      { label: "Settings", href: "/profile", icon: Settings },
+      { label: "workspace.notifications", href: "/notifications", icon: Bell },
+      { label: "workspace.settings", href: "/profile", icon: Settings },
     ],
   },
 ];
 
 export const supplierNav: NavSection[] = [
-  { items: [{ label: "Dashboard", href: "/supplier/dashboard", icon: LayoutGrid }] },
+  { items: [{ label: "workspace.dashboard", href: "/supplier/dashboard", icon: LayoutGrid }] },
   {
-    title: "Catalog",
+    title: "workspace.catalog",
     items: [
-      { label: "Products", href: "/supplier/products", icon: Package },
-      { label: "Import Excel", href: "/supplier/products/import", icon: UploadCloud },
-      { label: "Inventory", href: "/supplier/inventory", icon: Boxes },
+      { label: "workspace.products", href: "/supplier/products", icon: Package },
+      { label: "workspace.importExcel", href: "/supplier/products/import", icon: UploadCloud },
     ],
   },
   {
-    title: "Business",
+    title: "workspace.business",
     items: [
-      { label: "Orders", href: "/supplier/orders", icon: ClipboardList },
-      { label: "Customers", href: "/supplier/customers", icon: Users },
-      { label: "Reports", href: "/supplier/reports", icon: FileBarChart },
+      { label: "workspace.orders", href: "/supplier/orders", icon: ClipboardList },
+      { label: "workspace.reports", href: "/supplier/reports", icon: FileBarChart },
     ],
   },
   {
-    title: "Account",
+    title: "workspace.account",
     items: [
-      { label: "Notifications", href: "/notifications", icon: Bell },
-      { label: "Settings", href: "/profile", icon: Settings },
+      { label: "workspace.notifications", href: "/notifications", icon: Bell },
+      { label: "workspace.settings", href: "/profile", icon: Settings },
     ],
   },
 ];
 
 export const adminNav: NavSection[] = [
-  { items: [{ label: "Dashboard", href: "/admin/dashboard", icon: LayoutGrid }] },
+  { items: [{ label: "workspace.dashboard", href: "/admin/dashboard", icon: LayoutGrid }] },
   {
-    title: "Network",
+    title: "workspace.network",
     items: [
-      { label: "Organizations", href: "/admin/organizations", icon: Building2 },
-      { label: "Pharmacies", href: "/admin/pharmacies", icon: Store },
-      { label: "Suppliers", href: "/admin/suppliers", icon: Factory },
-      { label: "Users", href: "/admin/users", icon: Users },
-      { label: "Approvals", href: "/admin/approvals", icon: ShieldCheck, badge: "8" },
+      { label: "workspace.organizations", href: "/admin/organizations", icon: Building2 },
+      { label: "workspace.users", href: "/admin/users", icon: Users },
+      { label: "workspace.approvals", href: "/admin/approvals", icon: ShieldCheck },
     ],
   },
   {
-    title: "Catalog",
+    title: "workspace.catalog",
     items: [
-      { label: "Categories", href: "/admin/categories", icon: Tags },
-      { label: "Manufacturers", href: "/admin/manufacturers", icon: Factory },
-      { label: "Products", href: "/admin/products", icon: Package },
+      { label: "workspace.categories", href: "/admin/categories", icon: Tags },
+      { label: "workspace.manufacturers", href: "/admin/manufacturers", icon: Factory },
+      { label: "workspace.products", href: "/admin/products", icon: Package },
     ],
   },
   {
-    title: "Governance",
+    title: "workspace.governance",
     items: [
-      { label: "Audit logs", href: "/admin/audit-logs", icon: ClipboardList },
-      { label: "Reports", href: "/admin/reports", icon: FileBarChart },
-      { label: "Notifications", href: "/notifications", icon: Bell },
-      { label: "Settings", href: "/profile", icon: Settings },
+      { label: "workspace.audit", href: "/admin/audit-logs", icon: ClipboardList },
+      { label: "workspace.notifications", href: "/notifications", icon: Bell },
+      { label: "workspace.settings", href: "/profile", icon: Settings },
     ],
   },
 ];

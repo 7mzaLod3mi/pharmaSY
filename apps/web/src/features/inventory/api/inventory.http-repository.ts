@@ -14,6 +14,7 @@ interface RawBatch {
   quantity: number;
   reservedStock: number;
   minStock: number;
+  sellingPrice?: number | string | null;
   productId: string;
   product: {
     id: string;
@@ -79,6 +80,10 @@ function groupProducts(batches: RawBatch[]): InventoryProduct[] {
       quantity: batch.quantity,
       reservedQuantity: batch.reservedStock,
       availableQuantity: available,
+      sellingPrice:
+        batch.sellingPrice === null || batch.sellingPrice === undefined
+          ? undefined
+          : Number(batch.sellingPrice),
       status: batchStatus(batch),
     };
     const existing = grouped.get(batch.productId);
@@ -88,6 +93,9 @@ function groupProducts(batches: RawBatch[]): InventoryProduct[] {
       existing.reservedQuantity += batch.reservedStock;
       existing.lowStockThreshold = Math.max(existing.lowStockThreshold, batch.minStock);
       existing.batches.push(uiBatch);
+      if (existing.sellingPrice === undefined && uiBatch.sellingPrice !== undefined) {
+        existing.sellingPrice = uiBatch.sellingPrice;
+      }
     } else {
       grouped.set(batch.productId, {
         id: batch.productId,
@@ -97,6 +105,7 @@ function groupProducts(batches: RawBatch[]): InventoryProduct[] {
         availableQuantity: available,
         reservedQuantity: batch.reservedStock,
         lowStockThreshold: batch.minStock,
+        sellingPrice: uiBatch.sellingPrice,
         batches: [uiBatch],
       });
     }
@@ -159,14 +168,14 @@ export const inventoryHttpRepository: InventoryRepository = {
       }))
       .sort((a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt));
   },
-  async createBatch(data: any) {
+  async createBatch(data) {
     await apiRequest({
       method: "POST",
       url: "/inventory",
       data,
     });
   },
-  async adjustBatch(id: string, data: any) {
+  async adjustBatch(id, data) {
     await apiRequest({
       method: "PATCH",
       url: `/inventory/${id}/adjust`,

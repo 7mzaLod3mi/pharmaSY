@@ -7,7 +7,7 @@ export const posHttpRepository: PosRepository = {
     return apiRequest({ method: "POST", url: "/pos/sales", data: dto });
   },
   findSales(query: SaleQueryDto) {
-    return apiRequest({ method: "GET", url: "/pos/sales", params: query as any });
+    return apiRequest({ method: "GET", url: "/pos/sales", params: query });
   },
   getSale(saleId: string) {
     return apiRequest({ method: "GET", url: `/pos/sales/${saleId}` });

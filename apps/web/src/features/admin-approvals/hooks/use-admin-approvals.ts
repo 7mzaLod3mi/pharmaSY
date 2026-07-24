@@ -22,7 +22,8 @@ export function useApproveOrganization() {
 export function useRejectOrganization() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason?: string }) => adminApprovalsRepository.reject(id, reason),
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      adminApprovalsRepository.reject(id, reason),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: adminApprovalsQueryKeys.all }),
   });
 }

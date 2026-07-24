@@ -16,8 +16,9 @@ import {
   TR,
   Table,
 } from "@/components/ui/table";
-import Link from "next/link";
-import { Package, Plus, Search, Edit2, Trash2 } from "lucide-react";
+import { Plus, Search, Edit2, Trash2 } from "lucide-react";
+import type { Product } from "@pharmasyn/types";
+import { AdminProductDialog } from "@/features/admin-catalog/components/admin-product-dialog";
 import {
   useAdminProducts,
   useDeleteProduct,
@@ -25,6 +26,8 @@ import {
 
 export default function AdminProductsPage() {
   const [search, setSearch] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | undefined>();
   const { data, isLoading } = useAdminProducts({ search, limit: 50 });
   const deleteProduct = useDeleteProduct();
 
@@ -37,7 +40,13 @@ export default function AdminProductsPage() {
           title="Master Catalog"
           description="Manage the central dictionary of all verified pharmaceutical products."
         />
-        <Button className="shrink-0 gap-2">
+        <Button
+          className="shrink-0 gap-2"
+          onClick={() => {
+            setSelectedProduct(undefined);
+            setDialogOpen(true);
+          }}
+        >
           <Plus className="size-4" />
           Add Product
         </Button>
@@ -80,29 +89,35 @@ export default function AdminProductsPage() {
                   </TD>
                 </TR>
               ) : (
-                products?.map((p: any) => (
+                products?.map((p) => (
                   <TR key={p.id}>
                     <TD>
                       <div className="font-medium text-sm">{p.tradeNameEn}</div>
                       <div className="text-xs text-muted-foreground">{p.tradeNameAr}</div>
                     </TD>
                     <TD className="font-mono text-xs text-muted-foreground">
-                      {p.sku || "-"}
+                      {p.barcode || "-"}
                     </TD>
                     <TD className="text-sm text-muted-foreground">
                       {p.category?.nameEn || "-"}
                     </TD>
                     <TD>
-                      <Badge variant={p.status === "ACTIVE" ? "success" : p.status === "DRAFT" ? "neutral" : "warning"}>
+                      <Badge variant={p.status === "ACTIVE" ? "success" : "warning"}>
                         {p.status}
                       </Badge>
                     </TD>
                     <TD className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-foreground" asChild>
-                          <Link href={`/admin/products/${p.id}`}>
-                            <Edit2 className="size-4" />
-                          </Link>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-muted-foreground hover:text-foreground"
+                          onClick={() => {
+                            setSelectedProduct(p);
+                            setDialogOpen(true);
+                          }}
+                        >
+                          <Edit2 className="size-4" />
                         </Button>
                         <Button 
                           variant="ghost" 
@@ -127,6 +142,11 @@ export default function AdminProductsPage() {
             </Table>
         </Card>
       </div>
+      <AdminProductDialog
+        open={dialogOpen}
+        product={selectedProduct}
+        onOpenChange={setDialogOpen}
+      />
     </DashboardShell>
   );
 }

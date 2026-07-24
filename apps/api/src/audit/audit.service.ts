@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface CreateAuditLogDto {
@@ -25,8 +26,8 @@ export class AuditService {
         entityType: dto.entityType,
         entityId: dto.entityId,
         action: dto.action,
-        prevValues: dto.prevValues as any,
-        newValues: dto.newValues as any,
+        prevValues: dto.prevValues as Prisma.InputJsonValue | undefined,
+        newValues: dto.newValues as Prisma.InputJsonValue | undefined,
         userId: dto.userId,
         orgId: dto.orgId,
         userRole: dto.userRole,
@@ -47,6 +48,11 @@ export class AuditService {
     const [data, total] = await Promise.all([
       this.prisma.auditLog.findMany({
         where,
+        include: {
+          user: {
+            select: { id: true, email: true, firstName: true, lastName: true },
+          },
+        },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,

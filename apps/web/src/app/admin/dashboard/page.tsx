@@ -8,27 +8,28 @@ import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/ca
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, Users, ShieldCheck, TrendingUp, ArrowUpRight } from "lucide-react";
-
-const pendingApprovals = [
-  { name: "MediPlus Pharmacy", type: "Pharmacy", submitted: "Jul 19, 2026" },
-  { name: "Green Valley Distribution", type: "Supplier", submitted: "Jul 18, 2026" },
-  { name: "Care Point Branch 2", type: "Pharmacy", submitted: "Jul 17, 2026" },
-];
+import { Building2, Users, ShieldCheck, ClipboardList, ArrowUpRight } from "lucide-react";
+import Link from "next/link";
+import { useAdminStats } from "@/features/admin/hooks/use-admin";
+import { useAdminApprovals } from "@/features/admin-approvals/hooks/use-admin-approvals";
 
 export default function AdminDashboardPage() {
+  const stats = useAdminStats();
+  const approvals = useAdminApprovals();
+  const pendingApprovals = approvals.data?.slice(0, 5) ?? [];
+
   return (
-    <DashboardShell sections={adminNav} roleLabel="Administrator" userName="Layla Haddad">
+    <DashboardShell sections={adminNav} roleLabel="Administrator" userName="Admin">
       <PageHeader
         title="Dashboard"
         description="Platform-wide overview across organizations and activity."
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Organizations" value="286" animatedValue={286} delta={{ value: "+12", direction: "up" }} icon={Building2} />
-        <StatCard label="Active users" value="4,120" animatedValue={4120} delta={{ value: "+3.2%", direction: "up" }} icon={Users} />
-        <StatCard label="Pending approvals" value="8" animatedValue={8} icon={ShieldCheck} />
-        <StatCard label="GMV this month" value="$1.24M" animatedValue={1.24} format="currency" suffix="M" delta={{ value: "+11%", direction: "up" }} icon={TrendingUp} />
+        <StatCard label="Approved organizations" value={String((stats.data?.totalPharmacies ?? 0) + (stats.data?.totalSuppliers ?? 0))} animatedValue={(stats.data?.totalPharmacies ?? 0) + (stats.data?.totalSuppliers ?? 0)} icon={Building2} />
+        <StatCard label="Users" value={String(stats.data?.totalUsers ?? 0)} animatedValue={stats.data?.totalUsers ?? 0} icon={Users} />
+        <StatCard label="Pending approvals" value={String(stats.data?.pendingApprovals ?? 0)} animatedValue={stats.data?.pendingApprovals ?? 0} icon={ShieldCheck} />
+        <StatCard label="Orders" value={String(stats.data?.totalOrders ?? 0)} animatedValue={stats.data?.totalOrders ?? 0} icon={ClipboardList} />
       </div>
 
       <Card>
@@ -37,8 +38,10 @@ export default function AdminDashboardPage() {
             <CardTitle>Pending approvals</CardTitle>
             <CardDescription>New organizations waiting for verification</CardDescription>
           </div>
-          <Button variant="secondary" size="sm">
+          <Button variant="secondary" size="sm" asChild>
+            <Link href="/admin/approvals">
             View all <ArrowUpRight className="size-3.5" />
+            </Link>
           </Button>
         </CardHeader>
         <Table>
@@ -51,16 +54,31 @@ export default function AdminDashboardPage() {
             </TR>
           </THead>
           <TBody>
-            {pendingApprovals.map((a) => (
-              <TR key={a.name}>
+            {approvals.isLoading ? (
+              <TR>
+                <TD colSpan={4} className="py-8 text-center text-muted-foreground">
+                  Loading approvals...
+                </TD>
+              </TR>
+            ) : pendingApprovals.length === 0 ? (
+              <TR>
+                <TD colSpan={4} className="py-8 text-center text-muted-foreground">
+                  No organizations are awaiting approval.
+                </TD>
+              </TR>
+            ) : pendingApprovals.map((a) => (
+              <TR key={a.id}>
                 <TD className="font-medium">{a.name}</TD>
                 <TD>
                   <Badge variant="brand">{a.type}</Badge>
                 </TD>
-                <TD className="text-muted-foreground">{a.submitted}</TD>
-                <TD className="space-x-2">
-                  <Button size="sm">Approve</Button>
-                  <Button size="sm" variant="secondary">Review</Button>
+                <TD className="text-muted-foreground">
+                  {new Date(a.submittedAt).toLocaleDateString()}
+                </TD>
+                <TD>
+                  <Button size="sm" variant="secondary" asChild>
+                    <Link href="/admin/approvals">Review</Link>
+                  </Button>
                 </TD>
               </TR>
             ))}

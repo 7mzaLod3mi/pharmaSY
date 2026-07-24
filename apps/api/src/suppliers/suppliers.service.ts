@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrgStatus, UserStatus } from '@pharmasyn/types';
+import { AuditService } from '../audit/audit.service';
 
 export interface CreateSupplierProfileDto {
   name: string;
@@ -27,7 +28,10 @@ export interface UpdateSupplierProfileDto {
 
 @Injectable()
 export class SuppliersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private audit: AuditService,
+  ) {}
 
   async createProfile(userId: string, data: CreateSupplierProfileDto) {
     const user = await this.prisma.user.findUnique({
@@ -87,9 +91,25 @@ export class SuppliersService {
     const supplier = await this.prisma.supplier.findUnique({ where: { userId } });
     if (!supplier) throw new NotFoundException('Supplier profile not found');
 
-    return this.prisma.supplier.update({
+    const updated = await this.prisma.supplier.update({
       where: { userId },
       data,
     });
+    await this.audit.log({
+      entityType: 'Supplier',
+      entityId: supplier.id,
+      action: 'UPDATE_PROFILE',
+      prevValues: {
+        name: supplier.name,
+        address: supplier.address,
+        city: supplier.city,
+        phone: supplier.phone,
+      },
+      newValues: { ...data },
+      userId,
+      orgId: supplier.id,
+      userRole: 'SUPPLIER',
+    });
+    return updated;
   }
 }

@@ -14,6 +14,7 @@ import {
   useApproveOrganization,
   useRejectOrganization,
 } from "@/features/admin-approvals/hooks/use-admin-approvals";
+import { normalizeApiError } from "@/lib/http-client";
 
 export default function AdminApprovalsPage() {
   const { data: approvals, isLoading } = useAdminApprovals();
@@ -21,7 +22,7 @@ export default function AdminApprovalsPage() {
   const reject = useRejectOrganization();
 
   return (
-    <DashboardShell sections={adminNav} roleLabel="Administrator" userName="Layla Haddad">
+    <DashboardShell sections={adminNav} roleLabel="Administrator" userName="Admin">
       <PageHeader
         title="Approvals"
         description="Review and verify new organizations before they go live."
@@ -56,13 +57,16 @@ export default function AdminApprovalsPage() {
                       {new Date(a.submittedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {a.documents.map((d) => (
-                        <span
-                          key={d}
+                      {a.documents.map((document) => (
+                        <a
+                          href={document.url}
+                          key={document.url}
+                          rel="noreferrer"
+                          target="_blank"
                           className="flex items-center gap-1 rounded-[var(--radius-sm)] border border-border px-2 py-1 text-[12px] text-muted-foreground"
                         >
-                          <FileCheck className="size-3.5" /> {d}
-                        </span>
+                          <FileCheck className="size-3.5" /> {document.label}
+                        </a>
                       ))}
                     </div>
                   </div>
@@ -72,8 +76,18 @@ export default function AdminApprovalsPage() {
                     variant="secondary"
                     size="sm"
                     onClick={() => {
-                      reject.mutate({ id: a.id });
-                      toast.success(`${a.name} rejected`);
+                      const reason = window.prompt(
+                        "Enter a detailed rejection reason (at least 10 characters):"
+                      )?.trim();
+                      if (!reason || reason.length < 10) return;
+                      reject.mutate(
+                        { id: a.id, reason },
+                        {
+                          onSuccess: () => toast.success(`${a.name} rejected`),
+                          onError: (error) =>
+                            toast.error(normalizeApiError(error).message),
+                        }
+                      );
                     }}
                   >
                     <X className="size-4" /> Reject
@@ -81,8 +95,11 @@ export default function AdminApprovalsPage() {
                   <Button
                     size="sm"
                     onClick={() => {
-                      approve.mutate(a.id);
-                      toast.success(`${a.name} approved`);
+                      approve.mutate(a.id, {
+                        onSuccess: () => toast.success(`${a.name} approved`),
+                        onError: (error) =>
+                          toast.error(normalizeApiError(error).message),
+                      });
                     }}
                   >
                     Approve

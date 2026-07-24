@@ -1,6 +1,11 @@
 import { apiRequest } from "@/lib/http-client";
 import type { SupplierProductsRepository } from "./supplier-products.repository";
-import type { SupplierProduct, SupplierProductFilters } from "./supplier-products.types";
+import type {
+  QuantityDiscountTier,
+  SupplierProduct,
+  SupplierProductFilters,
+  UpsertSupplierProductInput,
+} from "./supplier-products.types";
 
 interface RawSupplierProduct {
   id: string;
@@ -8,6 +13,10 @@ interface RawSupplierProduct {
   stock: number;
   minOrder: number;
   isAvailable: boolean;
+  expiryDate?: string | null;
+  batchNumber?: string | null;
+  notes?: string | null;
+  quantityDiscounts?: unknown;
   product: {
     id: string;
     sku?: string | null;
@@ -35,11 +44,20 @@ function mapProduct(item: RawSupplierProduct): SupplierProduct {
     : "—";
   return {
     id: item.id,
+    productId: item.product.id,
     sku: item.product.sku ?? item.product.barcode ?? item.product.id,
     name,
     category,
     price: Number(item.price),
     moq: item.minOrder,
+    stock: item.stock,
+    expiryDate: item.expiryDate ?? undefined,
+    batchNumber: item.batchNumber ?? undefined,
+    notes: item.notes ?? undefined,
+    isAvailable: item.isAvailable,
+    quantityDiscounts: Array.isArray(item.quantityDiscounts)
+      ? (item.quantityDiscounts as QuantityDiscountTier[])
+      : [],
     status: !item.isAvailable ? "inactive" : item.stock <= item.minOrder ? "low_stock" : "active",
   };
 }
@@ -65,7 +83,7 @@ export const supplierProductsHttpRepository: SupplierProductsRepository = {
     });
     return mapProduct(updated);
   },
-  async upsert(payload: any) {
+  async upsert(payload: UpsertSupplierProductInput) {
     const response = await apiRequest<RawSupplierProduct>({
       method: "POST",
       url: "/supplier-products",

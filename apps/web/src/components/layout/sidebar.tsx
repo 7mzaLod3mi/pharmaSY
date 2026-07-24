@@ -6,6 +6,7 @@ import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PillIcon } from "lucide-react";
 import { useCartStore } from "@/stores/cart-store";
+import { useLocale } from "@/lib/i18n";
 
 export interface NavItem {
   label: string;
@@ -29,6 +30,7 @@ interface SidebarNavProps {
 /** Shared nav content — used by both the desktop rail and the mobile drawer. */
 export function SidebarNav({ sections, roleLabel, homeHref, onNavigate }: SidebarNavProps) {
   const pathname = usePathname();
+  const { t } = useLocale();
   const cartCount = useCartStore((s) => s.lines.reduce((sum, l) => sum + l.quantity, 0));
 
   return (
@@ -57,7 +59,7 @@ export function SidebarNav({ sections, roleLabel, homeHref, onNavigate }: Sideba
           <div key={i}>
             {section.title && (
               <p className="px-2.5 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-brand-200/70">
-                {section.title}
+                {t(section.title)}
               </p>
             )}
             <div className="space-y-0.5">
@@ -82,7 +84,7 @@ export function SidebarNav({ sections, roleLabel, homeHref, onNavigate }: Sideba
                         active ? "text-brand-300" : "text-brand-200/70 group-hover:text-white"
                       )}
                     />
-                    <span className="flex-1">{item.label}</span>
+                    <span className="flex-1">{t(item.label)}</span>
                     {item.href === "/pharmacy/cart" && cartCount > 0 ? (
                       <span className="rounded-full bg-brand-900/40 border border-brand-800/50 px-1.5 py-0.5 text-[10.5px] font-semibold text-brand-400">
                         {cartCount}

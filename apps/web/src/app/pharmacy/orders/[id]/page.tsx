@@ -20,6 +20,7 @@ import {
 import { Loader2, ArrowLeft, Printer, Ban } from "lucide-react";
 import { useOrderDetails, useCancelOrder } from "@/features/orders/hooks/use-orders";
 import type { OrderStatus } from "@/features/orders/api/orders.types";
+import { normalizeApiError } from "@/lib/http-client";
 
 const statusVariant: Record<OrderStatus, "info" | "success" | "warning" | "danger"> = {
   confirmed: "info",
@@ -54,13 +55,14 @@ export default function PharmacyOrderDetailsPage({ params }: { params: Promise<{
   }
 
   const oStatus = order.status.toLowerCase() as OrderStatus;
-  const canCancel = oStatus === "pending";
+  const canCancel = oStatus === "pending" || oStatus === "confirmed";
 
   const handleCancel = () => {
     if (window.confirm("Are you sure you want to cancel this order?")) {
       cancelOrder.mutate(id, {
         onSuccess: () => toast.success("Order cancelled successfully"),
-        onError: (err: any) => toast.error(err.message || "Failed to cancel order"),
+        onError: (error: unknown) =>
+          toast.error(normalizeApiError(error).message),
       });
     }
   };
@@ -112,19 +114,24 @@ export default function PharmacyOrderDetailsPage({ params }: { params: Promise<{
                   </TR>
                 </THead>
                 <TBody>
-                  {order.items?.map((item: any) => (
+                  {order.items?.map((item) => {
+                    const product =
+                      item.supplierProduct?.product ??
+                      item.marketplaceOffer?.product;
+                    return (
                     <TR key={item.id}>
                       <TD>
-                        <div className="font-medium">{item.productNameAr || "Product"}</div>
-                        <div className="text-xs text-muted-foreground">{item.productNameEn}</div>
+                        <div className="font-medium">{product?.tradeNameAr || "Product"}</div>
+                        <div className="text-xs text-muted-foreground">{product?.tradeNameEn}</div>
                       </TD>
-                      <TD>${Number(item.price).toFixed(2)}</TD>
+                      <TD>${Number(item.unitPrice).toFixed(2)}</TD>
                       <TD>{item.quantity}</TD>
                       <TD className="text-right font-medium">
-                        ${(Number(item.price) * item.quantity).toFixed(2)}
+                        ${Number(item.subtotal).toFixed(2)}
                       </TD>
                     </TR>
-                  ))}
+                    );
+                  })}
                   <TR>
                     <TD colSpan={3} className="text-right font-medium">
                       Subtotal

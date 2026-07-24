@@ -30,10 +30,16 @@ function mapOrganization(item: PendingOrganization, type: ApprovalOrgType): Appr
     submittedAt: item.createdAt ?? item.user.createdAt,
     contactEmail: item.user.email,
     documents: [
-      item.licenseUrl ? "License" : null,
-      item.commercialRegisterUrl ? "Commercial register" : null,
-      item.taxCertificateUrl ? "Tax certificate" : null,
-    ].filter((value): value is string => Boolean(value)),
+      item.licenseUrl ? { label: "License", url: item.licenseUrl } : null,
+      item.commercialRegisterUrl
+        ? { label: "Commercial register", url: item.commercialRegisterUrl }
+        : null,
+      item.taxCertificateUrl
+        ? { label: "Tax certificate", url: item.taxCertificateUrl }
+        : null,
+    ].filter(
+      (value): value is { label: string; url: string } => Boolean(value)
+    ),
   };
 }
 
@@ -61,13 +67,13 @@ export const adminApprovalsHttpRepository: AdminApprovalsRepository = {
     await apiRequest({ method: "PATCH", url: `/admin/${type === "pharmacy" ? "pharmacies" : "suppliers"}/${id}/approve` });
     typeById.delete(id);
   },
-  async reject(id: string, reason?: string) {
+  async reject(id: string, reason: string) {
     const type = await organizationType(id);
     if (!type) throw new Error("Organization approval request was not found.");
     await apiRequest({
       method: "PATCH",
       url: `/admin/${type === "pharmacy" ? "pharmacies" : "suppliers"}/${id}/reject`,
-      data: { reason: reason?.trim() || "Rejected after administrator review." },
+      data: { reason: reason.trim() },
     });
     typeById.delete(id);
   },

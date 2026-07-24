@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ordersRepository } from "../api/orders.repository.instance";
 import { ordersQueryKeys } from "../api/orders.query-keys";
-import type { OrderFilters } from "../api/orders.types";
+import type { OrderDetails, OrderFilters } from "../api/orders.types";
 
 export function useOrders(filters?: OrderFilters) {
   return useQuery({
@@ -25,7 +25,7 @@ export function useOrderDetails(id: string) {
     queryKey: [...ordersQueryKeys.all, "details", id],
     queryFn: async () => {
       const { apiRequest } = await import("@/lib/http-client");
-      const res = await apiRequest<any>({
+      const res = await apiRequest<OrderDetails>({
         method: "GET",
         url: `/orders/${id}`,
       });

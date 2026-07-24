@@ -6,11 +6,14 @@ import { pharmacyNav } from "@/lib/nav-config";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { UploadCloud, CheckCircle2, FileSpreadsheet, AlertCircle } from "lucide-react";
+import { UploadCloud, CheckCircle2, FileSpreadsheet } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import * as xlsx from "xlsx";
 import { toast } from "sonner";
-import { ImportMappingTable } from "@/features/inventory/components/import-mapping-table";
+import {
+  ImportMappingTable,
+  type InventorySpreadsheetRow,
+} from "@/features/inventory/components/import-mapping-table";
 import { useRouter } from "next/navigation";
 
 type SetupStep = "UPLOAD" | "MAPPING" | "COMPLETED";
@@ -18,7 +21,22 @@ type SetupStep = "UPLOAD" | "MAPPING" | "COMPLETED";
 export default function PharmacySetupPage() {
   const router = useRouter();
   const [step, setStep] = useState<SetupStep>("UPLOAD");
-  const [parsedData, setParsedData] = useState<any[]>([]);
+  const [parsedData, setParsedData] = useState<InventorySpreadsheetRow[]>([]);
+
+  const downloadTemplate = () => {
+    const template =
+      "TradeName,GenericName,Barcode,BatchNumber,ExpiryDate,Quantity,PurchaseCost,SellingPrice,MinStock,Location\n";
+    const url = URL.createObjectURL(
+      new Blob([template], { type: "text/csv;charset=utf-8" })
+    );
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "pharmasy_inventory_template.csv";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  };
 
   const handleFileUpload = (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -30,7 +48,7 @@ export default function PharmacySetupPage() {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = xlsx.read(data, { type: "array" });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = xlsx.utils.sheet_to_json(firstSheet);
+        const rows = xlsx.utils.sheet_to_json<Record<string, unknown>>(firstSheet);
         
         if (rows.length === 0) {
           toast.error("The uploaded file is empty.");
@@ -38,10 +56,10 @@ export default function PharmacySetupPage() {
         }
 
         // Basic formula injection protection (sanitize rows)
-        const sanitizedRows = rows.map((row: any, index) => {
-          const cleanRow: any = { _id: `row-${index}` };
+        const sanitizedRows: InventorySpreadsheetRow[] = rows.map((row, index) => {
+          const cleanRow: InventorySpreadsheetRow = { _id: `row-${index}` };
           Object.keys(row).forEach(key => {
-            let val = row[key];
+            let val: unknown = row[key];
             if (typeof val === 'string' && /^[=+\-@]/.test(val)) {
               val = `'${val}`; // neutralize formula
             }
@@ -52,7 +70,7 @@ export default function PharmacySetupPage() {
 
         setParsedData(sanitizedRows);
         setStep("MAPPING");
-      } catch (err) {
+      } catch {
         toast.error("Failed to parse the Excel file.");
       }
     };
@@ -100,7 +118,13 @@ export default function PharmacySetupPage() {
               <CardFooter className="flex justify-between border-t p-4 bg-muted/20">
                 <div className="flex items-center text-sm text-muted-foreground">
                   <FileSpreadsheet className="size-4 mr-2" />
-                  <a href="#" className="hover:underline text-primary">Download Template</a>
+                  <button
+                    className="text-primary hover:underline"
+                    type="button"
+                    onClick={downloadTemplate}
+                  >
+                    Download Template
+                  </button>
                 </div>
               </CardFooter>
             </Card>
@@ -113,7 +137,7 @@ export default function PharmacySetupPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-4">
-                    If you don't have an Excel file or prefer to start fresh, you can manually search the master catalog and add batches individually.
+                    If you don&apos;t have an Excel file or prefer to start fresh, you can manually search the master catalog and add batches individually.
                   </p>
                   <Button variant="secondary" onClick={() => router.push('/pharmacy/inventory')}>
                     Go to Inventory

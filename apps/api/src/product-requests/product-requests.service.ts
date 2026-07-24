@@ -2,6 +2,15 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { RequestStatus, ProductStatus } from '@pharmasyn/types';
+import { Prisma } from '@prisma/client';
+
+interface ApproveProductRequestInput {
+  categoryId: string;
+  tradeNameAr: string;
+  tradeNameEn: string;
+  unit: string;
+  manufacturerId?: string;
+}
 
 export interface CreateProductRequestDto {
   brandName: string;
@@ -24,9 +33,28 @@ export class ProductRequestsService {
   ) {}
 
   async create(dto: CreateProductRequestDto, requesterId: string) {
+    const existing = await this.prisma.productRequest.findFirst({
+      where: {
+        requesterId,
+        status: 'PENDING',
+        OR: [
+          ...(dto.barcode ? [{ barcode: dto.barcode }] : []),
+          {
+            brandName: {
+              equals: dto.brandName.trim(),
+              mode: 'insensitive',
+            },
+          },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (existing) return existing;
+
     return this.prisma.productRequest.create({
       data: {
         ...dto,
+        brandName: dto.brandName.trim(),
         requesterId,
         status: 'PENDING',
       },
@@ -56,7 +84,7 @@ export class ProductRequestsService {
     const req = await this.findById(id);
     
     // Very basic similarity search: match barcode or partial brand/generic names
-    const orConditions: any[] = [];
+    const orConditions: Prisma.ProductWhereInput[] = [];
     if (req.barcode) orConditions.push({ barcode: req.barcode });
     if (req.brandName) {
       orConditions.push({ tradeNameAr: { contains: req.brandName, mode: 'insensitive' } });
@@ -77,7 +105,11 @@ export class ProductRequestsService {
     });
   }
 
-  async approve(id: string, adminId: string, categoryId: string) {
+  async approve(
+    id: string,
+    adminId: string,
+    input: ApproveProductRequestInput,
+  ) {
     const req = await this.findById(id);
     if (req.status !== 'PENDING') throw new BadRequestException('Request is not pending');
 
@@ -88,16 +120,17 @@ export class ProductRequestsService {
     const result = await this.prisma.$transaction(async (tx) => {
       const product = await tx.product.create({
         data: {
-          tradeNameAr: req.brandName,
-          tradeNameEn: req.brandName,
+          tradeNameAr: input.tradeNameAr.trim(),
+          tradeNameEn: input.tradeNameEn.trim(),
           scientificName: req.genericName,
           dosageForm: req.dosageForm,
           strength: req.strength,
           packageSize: req.packageSize,
           barcode: req.barcode,
           imageUrl: req.imageUrl,
-          categoryId: categoryId, // Required from Admin
-          unit: 'box', // Defaulting for now
+          categoryId: input.categoryId,
+          manufacturerId: input.manufacturerId,
+          unit: input.unit.trim(),
           status: 'ACTIVE',
           version: 1,
           createdBy: adminId,
@@ -127,32 +160,50 @@ export class ProductRequestsService {
     return result;
   }
 
-  async reject(id: string, reason: string) {
+  async reject(id: string, reason: string, adminId: string) {
     const req = await this.findById(id);
     if (req.status !== 'PENDING') throw new BadRequestException('Request is not pending');
 
-    return this.prisma.productRequest.update({
+    const updated = await this.prisma.productRequest.update({
       where: { id },
       data: {
         status: 'REJECTED',
         rejectionReason: reason,
       },
     });
+    await this.audit.log({
+      entityType: 'ProductRequest',
+      entityId: id,
+      action: 'REJECT_PRODUCT_REQUEST',
+      userId: adminId,
+      userRole: 'ADMIN',
+      reason,
+    });
+    return updated;
   }
 
-  async merge(id: string, productId: string) {
+  async merge(id: string, productId: string, adminId: string) {
     const req = await this.findById(id);
     if (req.status !== 'PENDING') throw new BadRequestException('Request is not pending');
 
     const product = await this.prisma.product.findUnique({ where: { id: productId } });
     if (!product) throw new NotFoundException('Master product not found to merge into');
 
-    return this.prisma.productRequest.update({
+    const updated = await this.prisma.productRequest.update({
       where: { id },
       data: {
         status: 'MERGED',
         resolvedProductId: productId,
       },
     });
+    await this.audit.log({
+      entityType: 'ProductRequest',
+      entityId: id,
+      action: 'MERGE_PRODUCT_REQUEST',
+      userId: adminId,
+      userRole: 'ADMIN',
+      newValues: { resolvedProductId: productId },
+    });
+    return updated;
   }
 }

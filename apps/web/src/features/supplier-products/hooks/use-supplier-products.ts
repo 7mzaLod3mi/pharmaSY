@@ -3,7 +3,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supplierProductsRepository } from "../api/supplier-products.repository.instance";
 import { supplierProductsQueryKeys } from "../api/supplier-products.query-keys";
-import type { SupplierProductFilters } from "../api/supplier-products.types";
+import type {
+  SupplierProductFilters,
+  UpsertSupplierProductInput,
+} from "../api/supplier-products.types";
 
 export function useSupplierProducts(filters?: SupplierProductFilters) {
   return useQuery({
@@ -23,7 +26,8 @@ export function useToggleSupplierProductAvailability() {
 export function useUpsertSupplierProduct() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: any) => supplierProductsRepository.upsert(payload),
+    mutationFn: (payload: UpsertSupplierProductInput) =>
+      supplierProductsRepository.upsert(payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: supplierProductsQueryKeys.all }),
   });
 }

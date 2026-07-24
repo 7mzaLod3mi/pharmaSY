@@ -1,22 +1,32 @@
-import { IsString, IsNumber, IsOptional, IsDateString, IsPositive, Min, ValidateNested, IsArray, IsEnum } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class InventoryImportRowDto {
   @IsString()
   rowId: string; // Unique fingerprint or index for this row from the frontend
 
-  @IsString()
+  @IsUUID()
   productId: string;
 
-  @IsOptional()
   @IsString()
-  batchNumber?: string;
+  batchNumber: string;
 
-  @IsOptional()
   @IsDateString()
-  expiryDate?: string;
+  expiryDate: string;
 
-  @IsNumber()
+  @IsInt()
   @Min(0)
   quantity: number;
 
@@ -53,7 +63,7 @@ export enum ImportConflictStrategy {
 }
 
 export class CommitInventoryImportDto {
-  @IsString()
+  @IsUUID()
   clientMutationId: string;
 
   @IsOptional()
@@ -64,6 +74,7 @@ export class CommitInventoryImportDto {
   conflictStrategy: ImportConflictStrategy;
 
   @IsArray()
+  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => InventoryImportRowDto)
   rows: InventoryImportRowDto[];

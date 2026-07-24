@@ -46,10 +46,10 @@ export default function InventoryAlertsPage() {
                 {!loadingLowStock && lowStock?.length === 0 && (
                   <TR><TD colSpan={3} className="text-center py-6 text-muted-foreground">No low stock items.</TD></TR>
                 )}
-                {!loadingLowStock && lowStock?.map((item: any) => (
-                  <TR key={item.id}>
-                    <TD className="font-medium">{item.productNameAr || item.product?.tradeNameAr || "Product"}</TD>
-                    <TD className="font-bold text-warning-600">{item.availableQuantity}</TD>
+                {!loadingLowStock && lowStock?.map((item) => (
+                  <TR key={item.productId}>
+                    <TD className="font-medium">{item.productName}</TD>
+                    <TD className="font-bold text-warning-600">{item.totalAvailable}</TD>
                     <TD className="text-muted-foreground">{item.minStock}</TD>
                   </TR>
                 ))}
@@ -83,7 +83,7 @@ export default function InventoryAlertsPage() {
                 {!loadingExpiry && expiry?.length === 0 && (
                   <TR><TD colSpan={4} className="text-center py-6 text-muted-foreground">No near expiry batches.</TD></TR>
                 )}
-                {!loadingExpiry && expiry?.map((batch: any) => {
+                {!loadingExpiry && expiry?.map((batch) => {
                   const isExpired = new Date(batch.expiryDate).getTime() < Date.now();
                   return (
                     <TR key={batch.id}>

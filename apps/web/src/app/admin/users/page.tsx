@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { toast } from "sonner";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { adminNav } from "@/lib/nav-config";
@@ -16,12 +15,13 @@ import {
   THead,
   TR,
 } from "@/components/ui/table";
-import { Users, Ban, CheckCircle } from "lucide-react";
+import { Ban, CheckCircle } from "lucide-react";
 import {
   useAdminUsers,
   useSuspendUser,
   useActivateUser,
 } from "@/features/admin/hooks/use-admin";
+import { normalizeApiError } from "@/lib/http-client";
 
 export default function AdminUsersPage() {
   const { data, isLoading } = useAdminUsers({ limit: 50 });
@@ -63,7 +63,7 @@ export default function AdminUsersPage() {
                   </TD>
                 </TR>
               ) : (
-                users?.map((u: any) => (
+                users?.map((u) => (
                   <TR key={u.id}>
                     <TD>
                       <div className="font-medium text-sm">{u.firstName} {u.lastName}</div>
@@ -90,7 +90,8 @@ export default function AdminUsersPage() {
                             onClick={() => {
                               if (window.confirm("Suspend this user? They will lose access to the platform.")) {
                                 suspendUser.mutate(u.id, {
-                                  onSuccess: () => toast.success("User suspended")
+                                  onSuccess: () => toast.success("User suspended"),
+                                  onError: (error) => toast.error(normalizeApiError(error).message),
                                 });
                               }
                             }}
@@ -106,7 +107,8 @@ export default function AdminUsersPage() {
                             title="Activate user"
                             onClick={() => {
                               activateUser.mutate(u.id, {
-                                onSuccess: () => toast.success("User activated")
+                                onSuccess: () => toast.success("User activated"),
+                                onError: (error) => toast.error(normalizeApiError(error).message),
                               });
                             }}
                           >

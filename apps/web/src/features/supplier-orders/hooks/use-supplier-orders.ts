@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supplierOrdersRepository } from "../api/supplier-orders.repository.instance";
 import { supplierOrdersQueryKeys } from "../api/supplier-orders.query-keys";
 import type { SupplierOrderFilters, SupplierOrderStatus } from "../api/supplier-orders.types";
+import type { OrderDetails } from "@/features/orders/api/orders.types";
 
 export function useSupplierOrders(filters?: SupplierOrderFilters) {
   return useQuery({
@@ -27,7 +28,7 @@ export function useSupplierOrderDetails(id: string) {
     queryFn: async () => {
       // Direct call to API
       const { apiRequest } = await import("@/lib/http-client");
-      const res = await apiRequest<any>({
+      const res = await apiRequest<OrderDetails>({
         method: "GET",
         url: `/orders/${id}`,
       });

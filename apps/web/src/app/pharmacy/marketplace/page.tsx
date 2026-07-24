@@ -91,6 +91,7 @@ export default function MarketplacePage() {
           {products.map((p) => (
             <ProductCard
               key={p.id}
+              href={`/pharmacy/marketplace/${p.productId}`}
               title={p.name}
               description={`${p.manufacturer} · ${p.supplierName} · MOQ ${p.moq} · ${stockLabel[p.stockStatus]}`}
               price={`$${p.price.toFixed(2)}`}

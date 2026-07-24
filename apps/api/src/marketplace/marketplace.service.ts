@@ -1,17 +1,29 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class MarketplaceService {
   constructor(private prisma: PrismaService) {}
 
-  async searchProducts(query?: string) {
-    const productWhere: any = {
+  async searchProducts(
+    query?: string,
+    categoryId?: string,
+    limit = 50,
+    productId?: string,
+  ) {
+    const normalizedQuery = query?.trim().slice(0, 160);
+    const boundedLimit = Math.min(100, Math.max(1, Math.trunc(limit) || 50));
+    const productWhere: Prisma.ProductWhereInput = {
       status: 'ACTIVE',
-      ...(query ? {
+      deletedAt: null,
+      ...(productId ? { id: productId } : {}),
+      ...(categoryId ? { categoryId } : {}),
+      ...(normalizedQuery ? {
         OR: [
-          { tradeNameEn: { contains: query, mode: 'insensitive' } },
-          { tradeNameAr: { contains: query, mode: 'insensitive' } },
+          { tradeNameEn: { contains: normalizedQuery, mode: 'insensitive' } },
+          { tradeNameAr: { contains: normalizedQuery, mode: 'insensitive' } },
+          { barcode: { contains: normalizedQuery, mode: 'insensitive' } },
         ]
       } : {})
     };
@@ -26,6 +38,7 @@ export class MarketplaceService {
           product: true,
           supplier: { select: { id: true, name: true } }
         },
+        take: boundedLimit,
       }),
       this.prisma.marketplaceOffer.findMany({
         where: {
@@ -36,6 +49,7 @@ export class MarketplaceService {
           product: true,
           pharmacy: { select: { id: true, name: true } }
         },
+        take: boundedLimit,
       })
     ]);
 
@@ -56,11 +70,13 @@ export class MarketplaceService {
         supplierId: o.pharmacyId, // mapped for frontend compatibility
         supplier: { id: o.pharmacy.id, name: o.pharmacy.name }
       }))
-    ].sort((a, b) => Number(a.price) - Number(b.price));
+    ]
+      .sort((a, b) => Number(a.price) - Number(b.price))
+      .slice(0, boundedLimit);
 
     return {
       data,
-      meta: { total: data.length, page: 1, limit: data.length }
+      meta: { total: data.length, page: 1, limit: boundedLimit }
     };
   }
 }

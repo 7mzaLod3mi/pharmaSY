@@ -36,16 +36,15 @@ export default function LowStockAlertsPage() {
               ) : !alerts || alerts.length === 0 ? (
                 <TR><TD colSpan={5} className="text-center py-6 text-muted-foreground">No low stock items found.</TD></TR>
               ) : (
-                alerts.map((item: any) => {
+                alerts.map((item) => {
                   return (
-                    <TR key={item.id}>
+                    <TR key={item.productId}>
                       <TD>
-                        <div className="font-medium text-sm">{item.tradeNameEn}</div>
-                        <div className="text-xs text-muted-foreground">{item.barcode}</div>
+                        <div className="font-medium text-sm">{item.productName}</div>
                       </TD>
-                      <TD className="text-sm">{item.category?.nameEn || '-'}</TD>
-                      <TD className="text-sm font-medium text-red-600">{item.totalQuantity}</TD>
-                      <TD>{item.minStockThreshold}</TD>
+                      <TD className="text-sm text-muted-foreground">—</TD>
+                      <TD className="text-sm font-medium text-red-600">{item.totalAvailable}</TD>
+                      <TD>{item.minStock}</TD>
                       <TD>
                         <Badge variant="danger" dot>Low Stock</Badge>
                       </TD>

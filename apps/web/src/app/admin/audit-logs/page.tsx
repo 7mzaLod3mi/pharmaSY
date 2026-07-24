@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { adminNav } from "@/lib/nav-config";
 import { PageHeader } from "@/components/shared/page-header";
@@ -13,7 +12,6 @@ import {
   THead,
   TR,
 } from "@/components/ui/table";
-import { ScrollText } from "lucide-react";
 import { useAuditLogs } from "@/features/admin/hooks/use-admin";
 import { Badge } from "@/components/ui/badge";
 
@@ -54,13 +52,15 @@ export default function AdminAuditLogsPage() {
                     </TD>
                   </TR>
                 ) : (
-                  logs?.map((log: any) => (
+                  logs?.map((log) => (
                     <TR key={log.id}>
                       <TD className="text-sm text-muted-foreground">
                         {new Date(log.createdAt).toLocaleString()}
                       </TD>
                       <TD>
-                        <div className="font-medium text-sm">{log.user?.name || "System"}</div>
+                        <div className="font-medium text-sm">
+                          {log.user ? `${log.user.firstName} ${log.user.lastName}` : "System"}
+                        </div>
                         <div className="text-xs text-muted-foreground">{log.user?.email}</div>
                       </TD>
                       <TD>
@@ -72,9 +72,9 @@ export default function AdminAuditLogsPage() {
                         {log.entityType.toLowerCase()}
                       </TD>
                       <TD className="text-sm">
-                        {log.details ? (
-                          <div className="max-w-[200px] truncate text-muted-foreground" title={log.details}>
-                            {log.details}
+                        {log.reason ? (
+                          <div className="max-w-[200px] truncate text-muted-foreground" title={log.reason}>
+                            {log.reason}
                           </div>
                         ) : (
                           <span className="text-muted-foreground">-</span>

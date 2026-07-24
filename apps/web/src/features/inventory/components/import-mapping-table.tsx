@@ -7,60 +7,152 @@ import { Table, TBody, TH, THead, TR, TD } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ProductSearchSelect } from "./product-search-select";
 import { ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
-import { useCommitInventoryImport } from "../hooks/use-import";
+import {
+  useCommitInventoryImport,
+  useCreateProductRequest,
+} from "../hooks/use-import";
 import { toast } from "sonner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+export interface InventorySpreadsheetRow extends Record<string, unknown> {
+  _id: string;
+  productId?: string;
+}
 
 interface MappingTableProps {
-  rows: any[];
+  rows: InventorySpreadsheetRow[];
   onBack: () => void;
   onSuccess: () => void;
+}
+
+function textValue(row: InventorySpreadsheetRow, ...keys: string[]) {
+  for (const key of keys) {
+    const value = row[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number") return String(value);
+  }
+  return undefined;
+}
+
+function numberValue(row: InventorySpreadsheetRow, ...keys: string[]) {
+  const raw = textValue(row, ...keys);
+  if (!raw) return 0;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 export function ImportMappingTable({ rows, onBack, onSuccess }: MappingTableProps) {
   const [mappedRows, setMappedRows] = useState<Record<string, string>>({});
   const [conflictStrategy, setConflictStrategy] = useState<"SKIP" | "UPDATE">("UPDATE");
+  const [requestedRows, setRequestedRows] = useState<Set<string>>(new Set());
   const { mutateAsync: commitImport, isPending } = useCommitInventoryImport();
+  const createProductRequest = useCreateProductRequest();
 
   const handleMapProduct = (rowId: string, productId: string) => {
     setMappedRows(prev => ({ ...prev, [rowId]: productId }));
   };
 
   const handleCommit = async () => {
-    // Filter out rows that are not mapped
-    const readyRows = rows.map(r => {
-      const productId = mappedRows[r._id] || r.productId; // if it already had a valid productId
+    const normalizedRows = rows.map((r) => {
+      const productId = mappedRows[r._id] || r.productId;
       return { ...r, productId };
-    }).filter(r => !!r.productId);
-
-    if (readyRows.length === 0) {
-      toast.error("Please map at least one product before committing.");
+    });
+    const readyRows = normalizedRows.filter(
+      (row): row is InventorySpreadsheetRow & { productId: string } =>
+        typeof row.productId === "string" && row.productId.length > 0
+    );
+    const requestableRows = normalizedRows.filter(
+      (row) =>
+        !row.productId &&
+        !requestedRows.has(row._id) &&
+        Boolean(
+          textValue(
+            row,
+            "TradeName",
+            "Trade Name",
+            "tradeName",
+            "Product",
+            "product"
+          )
+        )
+    );
+    const incompleteRows = readyRows.filter(
+      (row) =>
+        !textValue(row, "BatchNumber", "Batch Number", "batchNumber") ||
+        !textValue(row, "ExpiryDate", "Expiry Date", "expiryDate")
+    );
+    if (incompleteRows.length > 0) {
+      toast.error(
+        `${incompleteRows.length} mapped row(s) are missing a batch number or expiry date. No values were invented.`
+      );
       return;
     }
 
     try {
-      // transform Excel columns to DTO
-      const payloadRows = readyRows.map(r => ({
+      if (requestableRows.length > 0) {
+        await Promise.all(
+          requestableRows.map((row) =>
+            createProductRequest.mutateAsync({
+              brandName:
+                textValue(
+                  row,
+                  "TradeName",
+                  "Trade Name",
+                  "tradeName",
+                  "Product",
+                  "product"
+                ) ?? "Unknown product",
+              genericName: textValue(row, "GenericName", "Generic Name", "genericName"),
+              manufacturer: textValue(row, "Manufacturer", "manufacturer"),
+              dosageForm: textValue(row, "DosageForm", "Dosage Form", "dosageForm"),
+              strength: textValue(row, "Strength", "strength"),
+              packageSize: textValue(row, "PackageSize", "Package Size", "packageSize"),
+              barcode: textValue(row, "Barcode", "barcode"),
+              notes: `Submitted from pharmacy inventory import row ${row._id}`,
+            })
+          )
+        );
+        setRequestedRows((current) => {
+          const next = new Set(current);
+          requestableRows.forEach((row) => next.add(row._id));
+          return next;
+        });
+        toast.success(
+          `${requestableRows.length} unmatched product request(s) sent for Admin review.`
+        );
+      }
+
+      if (readyRows.length === 0) {
+        if (requestableRows.length === 0) {
+          toast.error("Map a product or provide a product name before continuing.");
+        }
+        return;
+      }
+
+      const payloadRows = readyRows.map((r) => ({
         rowId: r._id,
         productId: r.productId,
-        batchNumber: r.BatchNumber || r['Batch Number'] || r.batchNumber,
-        expiryDate: r.ExpiryDate || r['Expiry Date'] || r.expiryDate,
-        quantity: Number(r.Quantity || r.quantity || 0),
-        purchaseCost: Number(r.PurchaseCost || r['Purchase Cost'] || r.purchaseCost || 0),
-        sellingPrice: r.SellingPrice || r['Selling Price'] || r.sellingPrice ? Number(r.SellingPrice || r['Selling Price'] || r.sellingPrice) : undefined,
-        minStock: r.MinStock || r['Min Stock'] || r.minStock ? Number(r.MinStock || r['Min Stock'] || r.minStock) : undefined,
-        location: r.Location || r.location,
+        batchNumber: textValue(r, "BatchNumber", "Batch Number", "batchNumber")!,
+        expiryDate: textValue(r, "ExpiryDate", "Expiry Date", "expiryDate")!,
+        quantity: numberValue(r, "Quantity", "quantity"),
+        purchaseCost: numberValue(r, "PurchaseCost", "Purchase Cost", "purchaseCost"),
+        sellingPrice: textValue(r, "SellingPrice", "Selling Price", "sellingPrice")
+          ? numberValue(r, "SellingPrice", "Selling Price", "sellingPrice")
+          : undefined,
+        minStock: textValue(r, "MinStock", "Min Stock", "minStock")
+          ? numberValue(r, "MinStock", "Min Stock", "minStock")
+          : undefined,
+        location: textValue(r, "Location", "location"),
       }));
 
       await commitImport({
-        clientMutationId: `import-${Date.now()}`,
+        clientMutationId: crypto.randomUUID(),
         conflictStrategy,
         rows: payloadRows,
       });
 
       onSuccess();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Failed to commit import.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to commit import.");
     }
   };
 
@@ -76,20 +168,24 @@ export function ImportMappingTable({ rows, onBack, onSuccess }: MappingTableProp
         <div className="flex gap-4 items-center">
           <div className="flex items-center gap-2 text-sm">
             <span>Duplicate action:</span>
-            <Select value={conflictStrategy} onValueChange={(val: "SKIP" | "UPDATE") => setConflictStrategy(val)}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="UPDATE">Update Stock</SelectItem>
-                <SelectItem value="SKIP">Skip Row</SelectItem>
-              </SelectContent>
-            </Select>
+            <select
+              className="h-9 rounded-full border border-border bg-background px-3 text-sm"
+              value={conflictStrategy}
+              onChange={(event) =>
+                setConflictStrategy(event.target.value as "SKIP" | "UPDATE")
+              }
+            >
+              <option value="UPDATE">Update Stock</option>
+              <option value="SKIP">Skip Row</option>
+            </select>
           </div>
           <Button variant="outline" onClick={onBack} disabled={isPending}>
             <ArrowLeft className="size-4 mr-2" /> Back
           </Button>
-          <Button onClick={handleCommit} disabled={isPending || Object.keys(mappedRows).length === 0}>
+          <Button
+            onClick={handleCommit}
+            disabled={isPending || createProductRequest.isPending || rows.length === 0}
+          >
             {isPending ? "Committing..." : "Commit Import"}
           </Button>
         </div>
@@ -110,6 +206,7 @@ export function ImportMappingTable({ rows, onBack, onSuccess }: MappingTableProp
             <TBody>
               {rows.map((row) => {
                 const isMapped = !!mappedRows[row._id] || !!row.productId;
+                const isRequested = requestedRows.has(row._id);
                 return (
                   <TR key={row._id} className={!isMapped ? "bg-red-50/50" : ""}>
                     <TD>
@@ -117,6 +214,8 @@ export function ImportMappingTable({ rows, onBack, onSuccess }: MappingTableProp
                         <Badge variant="success" className="bg-green-100 text-green-800 border-green-200">
                           <CheckCircle2 className="size-3 mr-1" /> Ready
                         </Badge>
+                      ) : isRequested ? (
+                        <Badge variant="warning">Admin review</Badge>
                       ) : (
                         <Badge variant="danger" className="bg-red-100 text-red-800 border-red-200">
                           <AlertCircle className="size-3 mr-1" /> Unmapped
@@ -124,8 +223,12 @@ export function ImportMappingTable({ rows, onBack, onSuccess }: MappingTableProp
                       )}
                     </TD>
                     <TD>
-                      <div className="font-medium text-sm">{row.TradeName || row['Trade Name'] || row.tradeName || 'Unknown'}</div>
-                      <div className="text-xs text-muted-foreground">{row.Barcode || row.barcode || ''}</div>
+                      <div className="font-medium text-sm">
+                        {textValue(row, "TradeName", "Trade Name", "tradeName") || "Unknown"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {textValue(row, "Barcode", "barcode") || ""}
+                      </div>
                     </TD>
                     <TD className="w-[300px]">
                       {row.productId ? (
@@ -139,11 +242,15 @@ export function ImportMappingTable({ rows, onBack, onSuccess }: MappingTableProp
                       )}
                     </TD>
                     <TD>
-                      <div className="text-sm">{row.BatchNumber || row['Batch Number'] || row.batchNumber || '-'}</div>
-                      <div className="text-xs text-muted-foreground">{row.ExpiryDate || row['Expiry Date'] || row.expiryDate || '-'}</div>
+                      <div className="text-sm">
+                        {textValue(row, "BatchNumber", "Batch Number", "batchNumber") || "-"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {textValue(row, "ExpiryDate", "Expiry Date", "expiryDate") || "-"}
+                      </div>
                     </TD>
-                    <TD>{row.Quantity || row.quantity || 0}</TD>
-                    <TD>${row.PurchaseCost || row['Purchase Cost'] || row.purchaseCost || 0}</TD>
+                    <TD>{numberValue(row, "Quantity", "quantity")}</TD>
+                    <TD>${numberValue(row, "PurchaseCost", "Purchase Cost", "purchaseCost")}</TD>
                   </TR>
                 );
               })}

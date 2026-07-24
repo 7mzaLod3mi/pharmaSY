@@ -2,42 +2,68 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { apiClient } from "@/lib/http-client";
+import { apiRequest, normalizeApiError } from "@/lib/http-client";
 import { toast } from "sonner";
-import { BellRing, Mail, Smartphone } from "lucide-react";
+import { Mail, Smartphone } from "lucide-react";
+
+interface NotificationPreferences {
+  orders: boolean;
+  marketplace: boolean;
+  inventory: boolean;
+  pharmacyExchange: boolean;
+  productRequests: boolean;
+  adminApproval: boolean;
+  system: boolean;
+  marketing: boolean;
+  emailEnabled: boolean;
+  inAppEnabled: boolean;
+  pushEnabled: boolean;
+  digestFrequency: "NONE" | "DAILY" | "WEEKLY";
+}
+
+const defaults: NotificationPreferences = {
+  orders: true,
+  marketplace: true,
+  inventory: true,
+  pharmacyExchange: false,
+  productRequests: true,
+  adminApproval: true,
+  system: true,
+  marketing: false,
+  emailEnabled: true,
+  inAppEnabled: true,
+  pushEnabled: true,
+  digestFrequency: "NONE",
+};
 
 export function NotificationSettings() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["notifications", "preferences"],
-    queryFn: async () => {
-      const res = await apiClient.get<any>("/notifications/preferences");
-      return res.data;
-    },
+    queryFn: () =>
+      apiRequest<NotificationPreferences>({
+        method: "GET",
+        url: "/notifications/preferences",
+      }),
   });
 
   const updatePrefs = useMutation({
-    mutationFn: async (payload: any) => {
-      await apiClient.patch("/notifications/preferences", payload);
-    },
+    mutationFn: (payload: Partial<NotificationPreferences>) =>
+      apiRequest<NotificationPreferences>({
+        method: "PATCH",
+        url: "/notifications/preferences",
+        data: payload,
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["notifications", "preferences"] });
       toast.success("Preferences saved successfully");
     },
-    onError: () => {
-      toast.error("Failed to save preferences");
+    onError: (error) => {
+      toast.error(normalizeApiError(error).message);
     }
   });
 
-  const preferences = data?.data || {
-    emailNotifications: true,
-    pushNotifications: false,
-    orderUpdates: true,
-    inventoryAlerts: true,
-    marketing: false,
-  };
+  const preferences = data ?? defaults;
 
   return (
     <div className="space-y-6">
@@ -55,7 +81,7 @@ export function NotificationSettings() {
                 <p className="text-sm text-muted-foreground">Receive daily digests and urgent alerts via email.</p>
               </div>
             </div>
-            <input type="checkbox" className="w-5 h-5 cursor-pointer accent-brand-600" checked={preferences.emailNotifications} onChange={(e) => updatePrefs.mutate({ emailNotifications: e.target.checked })} disabled={isLoading || updatePrefs.isPending} />
+            <input type="checkbox" className="w-5 h-5 cursor-pointer accent-brand-600" checked={preferences.emailEnabled} onChange={(e) => updatePrefs.mutate({ emailEnabled: e.target.checked })} disabled={isLoading || updatePrefs.isPending} />
           </div>
           
           <div className="flex items-center justify-between space-x-2">
@@ -66,7 +92,23 @@ export function NotificationSettings() {
                 <p className="text-sm text-muted-foreground">Receive browser push notifications when active.</p>
               </div>
             </div>
-            <input type="checkbox" className="w-5 h-5 cursor-pointer accent-brand-600" checked={preferences.pushNotifications} onChange={(e) => updatePrefs.mutate({ pushNotifications: e.target.checked })} disabled={isLoading || updatePrefs.isPending} />
+            <input type="checkbox" className="w-5 h-5 cursor-pointer accent-brand-600" checked={preferences.pushEnabled} onChange={(e) => updatePrefs.mutate({ pushEnabled: e.target.checked })} disabled={isLoading || updatePrefs.isPending} />
+          </div>
+
+          <div className="flex items-center justify-between space-x-2">
+            <div>
+              <h4 className="mb-1 text-sm font-medium leading-none">In-app notifications</h4>
+              <p className="text-sm text-muted-foreground">Show alerts inside PharmaSY.</p>
+            </div>
+            <input
+              checked={preferences.inAppEnabled}
+              className="h-5 w-5 cursor-pointer accent-brand-600"
+              disabled={isLoading || updatePrefs.isPending}
+              type="checkbox"
+              onChange={(event) =>
+                updatePrefs.mutate({ inAppEnabled: event.target.checked })
+              }
+            />
           </div>
         </CardContent>
       </Card>
@@ -82,7 +124,7 @@ export function NotificationSettings() {
               <h4 className="text-sm font-medium leading-none mb-1">Order Updates</h4>
               <p className="text-sm text-muted-foreground">Status changes on orders you placed or received.</p>
             </div>
-            <input type="checkbox" className="w-5 h-5 cursor-pointer accent-brand-600" checked={preferences.orderUpdates} onChange={(e) => updatePrefs.mutate({ orderUpdates: e.target.checked })} disabled={isLoading || updatePrefs.isPending} />
+            <input type="checkbox" className="w-5 h-5 cursor-pointer accent-brand-600" checked={preferences.orders} onChange={(e) => updatePrefs.mutate({ orders: e.target.checked })} disabled={isLoading || updatePrefs.isPending} />
           </div>
           
           <div className="flex items-center justify-between space-x-2">
@@ -90,8 +132,50 @@ export function NotificationSettings() {
               <h4 className="text-sm font-medium leading-none mb-1">Low Stock Alerts</h4>
               <p className="text-sm text-muted-foreground">When inventory items fall below minimum threshold.</p>
             </div>
-            <input type="checkbox" className="w-5 h-5 cursor-pointer accent-brand-600" checked={preferences.lowStock} onChange={(e) => updatePrefs.mutate({ lowStock: e.target.checked })} disabled={isLoading || updatePrefs.isPending} />
+            <input type="checkbox" className="w-5 h-5 cursor-pointer accent-brand-600" checked={preferences.inventory} onChange={(e) => updatePrefs.mutate({ inventory: e.target.checked })} disabled={isLoading || updatePrefs.isPending} />
           </div>
+
+          {(
+            [
+              ["marketplace", "Marketplace activity"],
+              ["productRequests", "Product request decisions"],
+              ["adminApproval", "Organization approval"],
+              ["system", "System messages"],
+              ["marketing", "Product news and marketing"],
+            ] as const
+          ).map(([key, label]) => (
+            <div className="flex items-center justify-between gap-4" key={key}>
+              <span className="text-sm font-medium">{label}</span>
+              <input
+                checked={preferences[key]}
+                className="h-5 w-5 cursor-pointer accent-brand-600"
+                disabled={isLoading || updatePrefs.isPending}
+                type="checkbox"
+                onChange={(event) =>
+                  updatePrefs.mutate({ [key]: event.target.checked })
+                }
+              />
+            </div>
+          ))}
+
+          <label className="flex items-center justify-between gap-4 text-sm font-medium">
+            Email digest
+            <select
+              className="h-9 rounded-full border border-border bg-background px-3 text-sm"
+              disabled={isLoading || updatePrefs.isPending}
+              value={preferences.digestFrequency}
+              onChange={(event) =>
+                updatePrefs.mutate({
+                  digestFrequency: event.target
+                    .value as NotificationPreferences["digestFrequency"],
+                })
+              }
+            >
+              <option value="NONE">None</option>
+              <option value="DAILY">Daily</option>
+              <option value="WEEKLY">Weekly</option>
+            </select>
+          </label>
         </CardContent>
       </Card>
     </div>

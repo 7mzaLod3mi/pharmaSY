@@ -63,7 +63,7 @@ export class PosService {
 
         await this.assertPharmacyStaff(tx, pharmacyId, staffUserId);
         this.assertClientTimestamp(dto.clientCreatedAt);
-        const prepared = await this.prepareSale(tx, dto);
+        const prepared = await this.prepareSale(tx, pharmacyId, dto);
         const paymentPlan = this.prepareSalePayments(
           dto.payments ?? [],
           prepared.totalAmount,
@@ -553,6 +553,7 @@ export class PosService {
 
   private async prepareSale(
     tx: Prisma.TransactionClient,
+    pharmacyId: string,
     dto: CreateSaleDto,
   ) {
     this.assertUniqueIds(
@@ -577,11 +578,51 @@ export class PosService {
       throw new BadRequestException('One or more products are unavailable');
     }
 
+    const pricedBatches = await tx.inventory.findMany({
+      where: {
+        pharmacyId,
+        productId: { in: productIds },
+        deletedAt: null,
+        expiryDate: { gt: new Date() },
+        quantity: { gt: 0 },
+        sellingPrice: { not: null },
+      },
+      select: {
+        productId: true,
+        sellingPrice: true,
+        quantity: true,
+        reservedStock: true,
+      },
+      orderBy: { expiryDate: 'asc' },
+    });
+    const priceByProduct = new Map<string, Prisma.Decimal>();
+    for (const batch of pricedBatches) {
+      if (
+        batch.quantity > batch.reservedStock &&
+        batch.sellingPrice &&
+        !priceByProduct.has(batch.productId)
+      ) {
+        priceByProduct.set(batch.productId, batch.sellingPrice);
+      }
+    }
+
     const items = [...dto.items]
       .sort((a, b) => a.productId.localeCompare(b.productId))
       .map((item) => {
         const product = products.find((candidate) => candidate.id === item.productId)!;
-        const unitPrice = this.money(item.unitPrice);
+        const authoritativePrice = priceByProduct.get(item.productId);
+        if (!authoritativePrice) {
+          throw new ConflictException(
+            `No selling price is configured for product ${item.productId}`,
+          );
+        }
+        const clientPrice = this.money(item.unitPrice);
+        const unitPrice = this.money(authoritativePrice);
+        if (!clientPrice.equals(unitPrice)) {
+          throw new ConflictException(
+            `Selling price changed for product ${item.productId}; refresh inventory and retry`,
+          );
+        }
         const grossAmount = this.money(unitPrice.mul(item.quantity));
         const lineDiscountAmount = this.money(item.lineDiscountAmount ?? 0);
         if (lineDiscountAmount.greaterThan(grossAmount)) {

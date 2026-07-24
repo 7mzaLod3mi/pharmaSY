@@ -8,12 +8,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileSpreadsheet, FileText, Download, Calendar, Loader2 } from "lucide-react";
+import { FileSpreadsheet, FileText, Calendar, Loader2 } from "lucide-react";
 import { useReportCatalog } from "@/features/reports/hooks/use-reports";
 import { reportsRepository } from "@/features/reports/api/reports.repository";
 import { toast } from "sonner";
+import { normalizeApiError } from "@/lib/http-client";
+import { useLocale } from "@/lib/i18n";
+import type { ReportExportFormat } from "@/features/reports/api/reports.types";
+import { ReportCenter } from "@/features/reports/components/report-center";
 
-export default function PharmacyReportsPage() {
+function LegacyPharmacyReportsPage() {
+  const { locale } = useLocale();
   const { data: catalog, isLoading } = useReportCatalog();
   const [downloading, setDownloading] = useState<string | null>(null);
   
@@ -23,11 +28,12 @@ export default function PharmacyReportsPage() {
   const [fromDate, setFromDate] = useState(firstDay.toISOString().split('T')[0]);
   const [toDate, setToDate] = useState(today.toISOString().split('T')[0]);
 
-  const handleDownload = async (reportType: string, format: "excel" | "pdf", reportName: string) => {
+  const handleDownload = async (reportType: string, format: ReportExportFormat, reportName: string) => {
     try {
       setDownloading(`${reportType}-${format}`);
       const blob = await reportsRepository.downloadDirectExport(reportType, {
         format,
+        locale: locale.toUpperCase() as "AR" | "EN",
         from: new Date(fromDate).toISOString(),
         to: new Date(toDate).toISOString(),
       });
@@ -35,14 +41,14 @@ export default function PharmacyReportsPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${reportName.replace(/\s+/g, '_')}_${fromDate}_to_${toDate}.${format === 'excel' ? 'xlsx' : 'pdf'}`;
+      a.download = `${reportName.replace(/\s+/g, '_')}_${fromDate}_to_${toDate}.${format === 'XLSX' ? 'xlsx' : 'pdf'}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
       toast.success("Download started");
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || err.message || "Failed to download report");
+    } catch (error: unknown) {
+      toast.error(normalizeApiError(error).message);
     } finally {
       setDownloading(null);
     }
@@ -83,50 +89,56 @@ export default function PharmacyReportsPage() {
           <Skeleton key={i} className="h-[200px] w-full" />
         ))}
         
-        {!isLoading && catalog?.map((report: any) => (
-          <Card key={report.type} className="flex flex-col">
+        {!isLoading && catalog?.map((report) => {
+          const name = locale === "ar" ? report.titleAr : report.titleEn;
+          return (
+          <Card key={report.reportType} className="flex flex-col">
             <CardHeader>
-              <CardTitle className="text-lg">{report.name}</CardTitle>
+              <CardTitle className="text-lg">{name}</CardTitle>
               <CardDescription className="line-clamp-2 min-h-[40px]">
-                {report.description}
+                {report.reportType.replaceAll("_", " ")}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-1" />
             <div className="p-6 pt-0 flex gap-3">
-              {report.formats.includes("EXCEL") && (
                 <Button 
                   variant="outline" 
                   className="flex-1 bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-900"
-                  onClick={() => handleDownload(report.type, "excel", report.name)}
+                  onClick={() => handleDownload(report.reportType, "XLSX", name)}
                   disabled={!!downloading}
                 >
-                  {downloading === `${report.type}-excel` ? (
+                  {downloading === `${report.reportType}-XLSX` ? (
                     <Loader2 className="mr-2 size-4 animate-spin" />
                   ) : (
                     <FileSpreadsheet className="mr-2 size-4" />
                   )}
                   Excel
                 </Button>
-              )}
-              {report.formats.includes("PDF") && (
                 <Button 
                   variant="outline" 
                   className="flex-1 bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-900"
-                  onClick={() => handleDownload(report.type, "pdf", report.name)}
+                  onClick={() => handleDownload(report.reportType, "PDF", name)}
                   disabled={!!downloading}
                 >
-                  {downloading === `${report.type}-pdf` ? (
+                  {downloading === `${report.reportType}-PDF` ? (
                     <Loader2 className="mr-2 size-4 animate-spin" />
                   ) : (
                     <FileText className="mr-2 size-4" />
                   )}
                   PDF
                 </Button>
-              )}
             </div>
           </Card>
-        ))}
+          );
+        })}
       </div>
     </DashboardShell>
   );
+}
+
+// Retained temporarily as a direct-download fallback while ReportCenter is the active UI.
+void LegacyPharmacyReportsPage;
+
+export default function PharmacyReportsPage() {
+  return <ReportCenter sections={pharmacyNav} roleLabel="Pharmacy" />;
 }

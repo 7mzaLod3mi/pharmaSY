@@ -5,6 +5,7 @@ export interface InventoryBatch {
   quantity: number;
   reservedQuantity: number;
   availableQuantity: number;
+  sellingPrice?: number;
   status: "active" | "near_expiry" | "expired" | "damaged" | "blocked";
 }
 
@@ -16,7 +17,33 @@ export interface InventoryProduct {
   availableQuantity: number;
   reservedQuantity: number;
   lowStockThreshold: number;
+  /** Selling price of the first sellable FEFO batch. */
+  sellingPrice?: number;
   batches: InventoryBatch[];
+}
+
+export interface CreateInventoryBatchInput {
+  productId: string;
+  batchNumber: string;
+  expiryDate: string;
+  quantity: number;
+  purchaseCost: number;
+  sellingPrice?: number;
+  minStock?: number;
+  location?: string;
+}
+
+export type InventoryAdjustmentType =
+  | "MANUAL_ADJUSTMENT"
+  | "DAMAGED"
+  | "EXPIRED"
+  | "ADMIN_CORRECTION";
+
+export interface AdjustInventoryBatchInput {
+  quantity: number;
+  type: InventoryAdjustmentType;
+  reason: string;
+  notes?: string;
 }
 
 export interface InventoryOverview {
@@ -36,4 +63,25 @@ export interface InventoryMovement {
   quantity: number;
   occurredAt: string; // ISO datetime
   actor: string;
+}
+
+export interface LowStockAlert {
+  productId: string;
+  productName: string;
+  totalAvailable: number;
+  minStock: number;
+}
+
+export interface ExpiryAlert {
+  id: string;
+  batchNumber: string;
+  expiryDate: string;
+  quantity: number;
+  reservedStock: number;
+  product: {
+    id: string;
+    tradeNameAr: string;
+    tradeNameEn: string;
+    barcode?: string | null;
+  };
 }

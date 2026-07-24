@@ -4,7 +4,8 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import {
-  IsString, IsOptional, IsBoolean, IsNumber, IsDateString, Min,
+  IsArray, IsBoolean, IsDateString, IsInt, IsNumber, IsOptional, IsString,
+  Min, ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { SupplierProductsService } from './supplier-products.service';
@@ -14,6 +15,14 @@ import type { JwtPayload } from '@pharmasyn/types';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { Permissions } from '../common/permissions';
 import { UserRole } from '@pharmasyn/types';
+
+export class QuantityDiscountTierDto {
+  @IsInt() @Min(1) @Type(() => Number)
+  minQuantity: number;
+
+  @IsNumber() @Min(0) @Type(() => Number)
+  unitPrice: number;
+}
 
 export class UpsertSupplierProductDto {
   @IsString()
@@ -40,8 +49,9 @@ export class UpsertSupplierProductDto {
   @IsOptional() @IsString()
   batchNumber?: string;
 
-  @IsOptional()
-  quantityDiscounts?: any;
+  @IsOptional() @IsArray() @ValidateNested({ each: true })
+  @Type(() => QuantityDiscountTierDto)
+  quantityDiscounts?: QuantityDiscountTierDto[];
 }
 
 export class UpdateSupplierProductDto {
@@ -66,8 +76,9 @@ export class UpdateSupplierProductDto {
   @IsOptional() @IsString()
   batchNumber?: string;
 
-  @IsOptional()
-  quantityDiscounts?: any;
+  @IsOptional() @IsArray() @ValidateNested({ each: true })
+  @Type(() => QuantityDiscountTierDto)
+  quantityDiscounts?: QuantityDiscountTierDto[];
 }
 
 @ApiTags('supplier-products')

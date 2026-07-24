@@ -20,7 +20,7 @@ export function usePosSales(query?: SaleQueryDto) {
 export function usePosSale(id: string) {
   return useQuery({
     queryKey: posQueryKeys.sale(id),
-    queryFn: () => posRepository.getSale(id).then(res => res as any),
+    queryFn: () => posRepository.getSale(id),
     enabled: !!id,
   });
 }

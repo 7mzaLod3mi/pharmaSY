@@ -2,6 +2,7 @@
 
 import { ShoppingCart } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 export interface ProductCardProps {
   title: string;
@@ -10,6 +11,7 @@ export interface ProductCardProps {
   imageSrc?: string;
   onAdd?: () => void;
   className?: string;
+  href?: string;
 }
 
 export function ProductCard({
@@ -19,6 +21,7 @@ export function ProductCard({
   imageSrc,
   onAdd,
   className,
+  href,
 }: ProductCardProps) {
   return (
     <div
@@ -27,12 +30,30 @@ export function ProductCard({
         className
       )}
     >
-      <div
-        className="h-32 w-full rounded-[var(--radius-md)] bg-brand-50 bg-cover bg-center"
-        style={imageSrc ? { backgroundImage: `url(${imageSrc})` } : undefined}
-      />
+      {href ? (
+        <Link
+          aria-label={`View ${title}`}
+          className="h-32 w-full rounded-[var(--radius-md)] bg-brand-50 bg-cover bg-center"
+          href={href}
+          style={imageSrc ? { backgroundImage: `url(${imageSrc})` } : undefined}
+        />
+      ) : (
+        <div
+          className="h-32 w-full rounded-[var(--radius-md)] bg-brand-50 bg-cover bg-center"
+          style={imageSrc ? { backgroundImage: `url(${imageSrc})` } : undefined}
+        />
+      )}
       <div className="pt-3">
-        <p className="text-[14.5px] font-semibold leading-snug text-foreground">{title}</p>
+        {href ? (
+          <Link
+            className="text-[14.5px] font-semibold leading-snug text-foreground hover:text-brand-600"
+            href={href}
+          >
+            {title}
+          </Link>
+        ) : (
+          <p className="text-[14.5px] font-semibold leading-snug text-foreground">{title}</p>
+        )}
         <p className="mt-1 line-clamp-2 text-[12.5px] leading-relaxed text-muted-foreground">
           {description}
         </p>

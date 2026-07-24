@@ -1,8 +1,47 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/http-client";
+import { apiClient, apiRequest } from "@/lib/http-client";
 import type { ApiResponse, PaginationQuery, User, UserStatus } from "@pharmasyn/types";
+
+export interface AdminDashboardStats {
+  totalUsers: number;
+  pendingApprovals: number;
+  pendingPharmacies: number;
+  pendingSuppliers: number;
+  totalPharmacies: number;
+  totalSuppliers: number;
+  totalOrders: number;
+}
+
+export interface AdminAuditLog {
+  id: string;
+  entityType: string;
+  entityId: string;
+  action: string;
+  prevValues?: unknown;
+  newValues?: unknown;
+  userRole: string;
+  reason?: string | null;
+  createdAt: string;
+  user?: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  } | null;
+}
+
+export function useAdminStats() {
+  return useQuery({
+    queryKey: ["admin", "stats"],
+    queryFn: () =>
+      apiRequest<AdminDashboardStats>({
+        method: "GET",
+        url: "/admin/stats",
+      }),
+  });
+}
 
 // -- Users
 
@@ -58,7 +97,7 @@ export function useAuditLogs(query?: { page?: number; limit?: number; entityType
       if (query?.entityType) searchParams.set("entityType", query.entityType);
       if (query?.userId) searchParams.set("userId", query.userId);
 
-      const res = await apiClient.get<ApiResponse<any[]>>(`/audit-logs?${searchParams.toString()}`);
+      const res = await apiClient.get<ApiResponse<AdminAuditLog[]>>(`/audit-logs?${searchParams.toString()}`);
       return res.data;
     },
   });

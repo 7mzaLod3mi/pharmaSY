@@ -9,34 +9,59 @@ import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ClipboardList, Users, Package, TrendingUp, ArrowUpRight, UploadCloud } from "lucide-react";
+import Link from "next/link";
+import { useSupplierOrders } from "@/features/supplier-orders/hooks/use-supplier-orders";
+import { useSupplierProducts } from "@/features/supplier-products/hooks/use-supplier-products";
 
-const incomingOrders = [
-  { id: "PO-4821", pharmacy: "Care Point Pharmacy", items: 14, total: "$2,140.00", status: "new" as const },
-  { id: "PO-4816", pharmacy: "Al-Shifa Branch 3", items: 6, total: "$860.50", status: "confirmed" as const },
-  { id: "PO-4809", pharmacy: "MediWell Pharmacy", items: 22, total: "$3,412.00", status: "shipped" as const },
-  { id: "PO-4802", pharmacy: "Family Care Pharmacy", items: 3, total: "$210.00", status: "confirmed" as const },
-];
-
-const statusVariant = { new: "info", confirmed: "brand", shipped: "success" } as const;
+const statusVariant = {
+  pending: "warning",
+  confirmed: "brand",
+  processing: "info",
+  shipped: "info",
+  delivered: "success",
+  cancelled: "danger",
+} as const;
 
 export default function SupplierDashboardPage() {
+  const orders = useSupplierOrders();
+  const products = useSupplierProducts();
+  const incomingOrders = orders.data?.slice(0, 5) ?? [];
+  const newOrders = orders.data?.filter((order) => order.status === "pending").length ?? 0;
+  const activePharmacies = new Set(
+    orders.data?.map((order) => order.pharmacyName) ?? []
+  ).size;
+  const monthlyRevenue =
+    orders.data
+      ?.filter((order) => {
+        const placed = new Date(order.placedAt);
+        const now = new Date();
+        return (
+          order.status !== "cancelled" &&
+          placed.getMonth() === now.getMonth() &&
+          placed.getFullYear() === now.getFullYear()
+        );
+      })
+      .reduce((sum, order) => sum + order.total, 0) ?? 0;
+
   return (
-    <DashboardShell sections={supplierNav} roleLabel="Supplier" userName="Omar Nasser">
+    <DashboardShell sections={supplierNav} roleLabel="Supplier" userName="Supplier">
       <PageHeader
         title="Dashboard"
         description="Track incoming orders and catalog performance."
         actions={
-          <Button variant="secondary">
+          <Button variant="secondary" asChild>
+            <Link href="/supplier/products/import">
             <UploadCloud className="size-4" /> Import products
+            </Link>
           </Button>
         }
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="New orders" value="9" animatedValue={9} delta={{ value: "+3", direction: "up" }} icon={ClipboardList} />
-        <StatCard label="Active pharmacies" value="64" animatedValue={64} delta={{ value: "+5", direction: "up" }} icon={Users} />
-        <StatCard label="Listed products" value="1,204" animatedValue={1204} icon={Package} />
-        <StatCard label="Monthly revenue" value="$182,400" animatedValue={182400} format="currency" delta={{ value: "+8.4%", direction: "up" }} icon={TrendingUp} />
+        <StatCard label="New orders" value={String(newOrders)} animatedValue={newOrders} icon={ClipboardList} />
+        <StatCard label="Ordering pharmacies" value={String(activePharmacies)} animatedValue={activePharmacies} icon={Users} />
+        <StatCard label="Listed products" value={String(products.data?.length ?? 0)} animatedValue={products.data?.length ?? 0} icon={Package} />
+        <StatCard label="Monthly revenue" value={`$${monthlyRevenue.toLocaleString()}`} animatedValue={monthlyRevenue} format="currency" icon={TrendingUp} />
       </div>
 
       <Card>
@@ -45,8 +70,10 @@ export default function SupplierDashboardPage() {
             <CardTitle>Incoming orders</CardTitle>
             <CardDescription>Purchase orders placed by pharmacies on the marketplace</CardDescription>
           </div>
-          <Button variant="secondary" size="sm">
+          <Button variant="secondary" size="sm" asChild>
+            <Link href="/supplier/orders">
             View all <ArrowUpRight className="size-3.5" />
+            </Link>
           </Button>
         </CardHeader>
         <Table>
@@ -60,12 +87,24 @@ export default function SupplierDashboardPage() {
             </TR>
           </THead>
           <TBody>
-            {incomingOrders.map((o) => (
+            {orders.isLoading ? (
+              <TR>
+                <TD colSpan={5} className="py-8 text-center text-muted-foreground">
+                  Loading orders...
+                </TD>
+              </TR>
+            ) : incomingOrders.length === 0 ? (
+              <TR>
+                <TD colSpan={5} className="py-8 text-center text-muted-foreground">
+                  No incoming orders.
+                </TD>
+              </TR>
+            ) : incomingOrders.map((o) => (
               <TR key={o.id}>
-                <TD className="font-medium">{o.id}</TD>
-                <TD className="text-muted-foreground">{o.pharmacy}</TD>
-                <TD className="text-muted-foreground">{o.items}</TD>
-                <TD>{o.total}</TD>
+                <TD className="font-medium">{o.orderNumber ?? o.id.slice(0, 8)}</TD>
+                <TD className="text-muted-foreground">{o.pharmacyName}</TD>
+                <TD className="text-muted-foreground">{o.itemCount}</TD>
+                <TD>${o.total.toFixed(2)}</TD>
                 <TD>
                   <Badge variant={statusVariant[o.status]} dot>
                     {o.status}

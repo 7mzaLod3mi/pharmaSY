@@ -10,11 +10,12 @@ import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Boxes, AlertTriangle, PackageX, TrendingDown, Search, Plus, PackageOpen, LayoutList } from "lucide-react";
+import { Boxes, AlertTriangle, PackageX, TrendingDown, Search, Plus, PackageOpen } from "lucide-react";
 import { useInventoryOverview, useInventoryProducts } from "@/features/inventory/hooks/use-inventory";
 import { ProductBatchesDialog } from "@/features/inventory/components/product-batches-dialog";
 import { useState } from "react";
 import Link from "next/link";
+import type { InventoryProduct } from "@/features/inventory/api/inventory.types";
 
 function nearestExpiry(batches: { expiryDate: string; status: string }[]) {
   const usable = batches.filter((b) => b.status !== "expired").sort((a, b) => a.expiryDate.localeCompare(b.expiryDate));
@@ -25,7 +26,12 @@ function nearestExpiry(batches: { expiryDate: string; status: string }[]) {
 export default function PharmacyInventoryPage() {
   const { data: overview, isLoading: overviewLoading } = useInventoryOverview();
   const { data: products, isLoading: productsLoading } = useInventoryProducts();
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedProduct, setSelectedProduct] = useState<InventoryProduct | null>(null);
+  const [search, setSearch] = useState("");
+  const filteredProducts = products?.filter((item) => {
+    const query = search.trim().toLocaleLowerCase();
+    return !query || item.sku.toLocaleLowerCase().includes(query) || item.name.toLocaleLowerCase().includes(query);
+  });
 
   return (
     <DashboardShell sections={pharmacyNav} roleLabel="Pharmacy" userName="Sara Ahmad">
@@ -65,7 +71,12 @@ export default function PharmacyInventoryPage() {
         <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-3">
           <div className="relative w-full max-w-xs">
             <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Search SKU or product…" className="ps-9" />
+            <Input
+              placeholder="Search SKU or product…"
+              className="ps-9"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
           </div>
         </div>
         <Table className="border-0">
@@ -90,7 +101,7 @@ export default function PharmacyInventoryPage() {
                 </TR>
               ))}
 
-            {!productsLoading && products?.length === 0 && (
+            {!productsLoading && filteredProducts?.length === 0 && (
               <TR>
                 <TD colSpan={7} className="py-10 text-center text-muted-foreground">
                   <PackageX className="mx-auto mb-2 size-6 text-muted-foreground/60" />
@@ -100,7 +111,7 @@ export default function PharmacyInventoryPage() {
             )}
 
             {!productsLoading &&
-              products?.map((item) => {
+              filteredProducts?.map((item) => {
                 const isOut = item.availableQuantity === 0;
                 const isLow = !isOut && item.availableQuantity <= item.lowStockThreshold;
                 const status = isOut

@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PharmaciesService } from './pharmacies.service';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -8,7 +8,7 @@ import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { Permissions } from '../common/permissions';
 import { UserRole } from '@pharmasyn/types';
 import { Roles } from '../common/decorators/roles.decorator';
-import { IsString, MinLength } from 'class-validator';
+import { IsOptional, IsString, MinLength } from 'class-validator';
 
 export class CreatePharmacyDto {
   @IsString()
@@ -30,6 +30,20 @@ export class CreatePharmacyDto {
   @IsString()
   @MinLength(8)
   phone: string;
+}
+
+export class UpdatePharmacyDto {
+  @IsOptional() @IsString() @MinLength(2)
+  name?: string;
+
+  @IsOptional() @IsString() @MinLength(5)
+  address?: string;
+
+  @IsOptional() @IsString() @MinLength(2)
+  city?: string;
+
+  @IsOptional() @IsString() @MinLength(8)
+  phone?: string;
 }
 
 @ApiTags('pharmacies')
@@ -55,5 +69,17 @@ export class PharmaciesController {
   @ApiOperation({ summary: 'Get current pharmacy profile' })
   async getProfile(@CurrentUser() user: JwtPayload) {
     return this.pharmaciesService.getProfile(user.sub);
+  }
+
+  @Patch('profile')
+  @Roles(UserRole.PHARMACY)
+  @AllowPendingOrganization()
+  @RequirePermissions(Permissions.PROFILE_MANAGE)
+  @ApiOperation({ summary: 'Update current pharmacy profile' })
+  async updateProfile(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: UpdatePharmacyDto,
+  ) {
+    return this.pharmaciesService.updateProfile(user.sub, dto);
   }
 }

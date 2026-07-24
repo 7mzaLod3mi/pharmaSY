@@ -3,6 +3,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { inventoryRepository } from "../api/inventory.repository.instance";
 import { inventoryQueryKeys } from "../api/inventory.query-keys";
+import type {
+  AdjustInventoryBatchInput,
+  CreateInventoryBatchInput,
+  ExpiryAlert,
+  LowStockAlert,
+} from "../api/inventory.types";
 
 export function useInventoryOverview() {
   return useQuery({
@@ -36,7 +42,8 @@ export function useInventoryMovements(productId?: string) {
 export function useCreateBatch() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: any) => inventoryRepository.createBatch(data),
+    mutationFn: (data: CreateInventoryBatchInput) =>
+      inventoryRepository.createBatch(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: inventoryQueryKeys.all }),
   });
 }
@@ -44,7 +51,13 @@ export function useCreateBatch() {
 export function useAdjustBatch() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => inventoryRepository.adjustBatch(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: AdjustInventoryBatchInput;
+    }) => inventoryRepository.adjustBatch(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: inventoryQueryKeys.all }),
   });
 }
@@ -62,7 +75,7 @@ export function useLowStockAlerts() {
     queryKey: [...inventoryQueryKeys.all, "alerts", "low-stock"],
     queryFn: async () => {
       const { apiRequest } = await import("@/lib/http-client");
-      const res = await apiRequest<any[]>({ method: "GET", url: "/inventory/alerts/low-stock" });
+      const res = await apiRequest<LowStockAlert[]>({ method: "GET", url: "/inventory/alerts/low-stock" });
       return res;
     },
   });
@@ -73,7 +86,7 @@ export function useExpiryAlerts(days: number = 90) {
     queryKey: [...inventoryQueryKeys.all, "alerts", "expiry", days],
     queryFn: async () => {
       const { apiRequest } = await import("@/lib/http-client");
-      const res = await apiRequest<any[]>({ method: "GET", url: `/inventory/alerts/expiry?days=${days}` });
+      const res = await apiRequest<ExpiryAlert[]>({ method: "GET", url: `/inventory/alerts/expiry?days=${days}` });
       return res;
     },
   });
