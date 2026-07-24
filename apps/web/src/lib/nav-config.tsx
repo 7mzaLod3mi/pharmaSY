@@ -49,8 +49,8 @@ export const pharmacyNav: NavSection[] = [
   {
     title: "Account",
     items: [
-      { label: "Notifications", href: "/pharmacy/notifications", icon: Bell },
-      { label: "Settings", href: "/pharmacy/settings", icon: Settings },
+      { label: "Notifications", href: "/notifications", icon: Bell },
+      { label: "Settings", href: "/profile", icon: Settings },
     ],
   },
 ];
@@ -76,8 +76,8 @@ export const supplierNav: NavSection[] = [
   {
     title: "Account",
     items: [
-      { label: "Notifications", href: "/supplier/notifications", icon: Bell },
-      { label: "Settings", href: "/supplier/settings", icon: Settings },
+      { label: "Notifications", href: "/notifications", icon: Bell },
+      { label: "Settings", href: "/profile", icon: Settings },
     ],
   },
 ];
@@ -107,8 +107,8 @@ export const adminNav: NavSection[] = [
     items: [
       { label: "Audit logs", href: "/admin/audit-logs", icon: ClipboardList },
       { label: "Reports", href: "/admin/reports", icon: FileBarChart },
-      { label: "Notifications", href: "/admin/notifications", icon: Bell },
-      { label: "Settings", href: "/admin/settings", icon: Settings },
+      { label: "Notifications", href: "/notifications", icon: Bell },
+      { label: "Settings", href: "/profile", icon: Settings },
     ],
   },
 ];

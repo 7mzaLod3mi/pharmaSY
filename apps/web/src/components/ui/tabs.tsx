@@ -9,7 +9,7 @@ export function TabsList({ className, ...props }: TabsPrimitive.TabsListProps) {
   return (
     <TabsPrimitive.List
       className={cn(
-        "inline-flex items-center gap-1 rounded-[var(--radius-md)] bg-black/[0.04] p-1",
+        "inline-flex items-center gap-1 rounded-[var(--radius-md)] bg-brand-50 p-1",
         className
       )}
       {...props}

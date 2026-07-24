@@ -116,7 +116,7 @@ function GlobalLoaderContent() {
             duration: prefersReducedMotion ? 0 : 0.4, 
             ease: [0.16, 1, 0.3, 1] 
           }}
-          className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-[#0a0a0a] pointer-events-auto"
+          className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-white pointer-events-auto"
           aria-live="assertive"
           aria-modal="true"
           role="dialog"

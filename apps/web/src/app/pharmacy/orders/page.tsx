@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Search, MoreHorizontal, PackageX } from "lucide-react";
+import { Download, Search, Eye, PackageX } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useOrders } from "@/features/orders/hooks/use-orders";
 import type { OrderStatus } from "@/features/orders/api/orders.types";
 
@@ -25,6 +26,7 @@ const statusVariant: Record<OrderStatus, "info" | "success" | "warning" | "dange
 };
 
 export default function PharmacyOrdersPage() {
+  const router = useRouter();
   const [tab, setTab] = useState<"all" | OrderStatus>("all");
   const [search, setSearch] = useState("");
 
@@ -100,7 +102,11 @@ export default function PharmacyOrdersPage() {
 
             {!isLoading &&
               orders?.map((o) => (
-                <TR key={o.id}>
+                <TR 
+                  key={o.id}
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => router.push(`/pharmacy/orders/${o.id}`)}
+                >
                   <TD className="font-medium">{o.orderNumber ?? o.id}</TD>
                   <TD className="text-muted-foreground">{o.supplierName}</TD>
                   <TD className="text-muted-foreground">
@@ -114,9 +120,16 @@ export default function PharmacyOrdersPage() {
                     </Badge>
                   </TD>
                   <TD>
-                    <button className="flex size-7 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] transition-colors duration-200 hover:bg-black/[0.04]">
-                      <MoreHorizontal className="size-4 text-muted-foreground" />
-                    </button>
+                    <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="size-8 text-muted-foreground hover:text-foreground"
+                        onClick={() => router.push(`/pharmacy/orders/${o.id}`)}
+                      >
+                        <Eye className="size-4" />
+                      </Button>
+                    </div>
                   </TD>
                 </TR>
               ))}

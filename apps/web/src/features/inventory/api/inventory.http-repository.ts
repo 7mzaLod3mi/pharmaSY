@@ -159,4 +159,24 @@ export const inventoryHttpRepository: InventoryRepository = {
       }))
       .sort((a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt));
   },
+  async createBatch(data: any) {
+    await apiRequest({
+      method: "POST",
+      url: "/inventory",
+      data,
+    });
+  },
+  async adjustBatch(id: string, data: any) {
+    await apiRequest({
+      method: "PATCH",
+      url: `/inventory/${id}/adjust`,
+      data,
+    });
+  },
+  async deleteBatch(id: string) {
+    await apiRequest({
+      method: "DELETE",
+      url: `/inventory/${id}`,
+    });
+  },
 };

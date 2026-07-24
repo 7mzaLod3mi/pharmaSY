@@ -65,4 +65,18 @@ export const supplierProductsHttpRepository: SupplierProductsRepository = {
     });
     return mapProduct(updated);
   },
+  async upsert(payload: any) {
+    const response = await apiRequest<RawSupplierProduct>({
+      method: "POST",
+      url: "/supplier-products",
+      data: payload,
+    });
+    return mapProduct(response);
+  },
+  async remove(id: string) {
+    await apiRequest({
+      method: "DELETE",
+      url: `/supplier-products/${id}`,
+    });
+  },
 };

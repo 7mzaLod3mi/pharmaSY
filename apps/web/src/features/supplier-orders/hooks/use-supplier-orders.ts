@@ -20,3 +20,19 @@ export function useUpdateSupplierOrderStatus() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: supplierOrdersQueryKeys.all }),
   });
 }
+
+export function useSupplierOrderDetails(id: string) {
+  return useQuery({
+    queryKey: [...supplierOrdersQueryKeys.all, "details", id],
+    queryFn: async () => {
+      // Direct call to API
+      const { apiRequest } = await import("@/lib/http-client");
+      const res = await apiRequest<any>({
+        method: "GET",
+        url: `/orders/${id}`,
+      });
+      return res;
+    },
+    enabled: !!id,
+  });
+}

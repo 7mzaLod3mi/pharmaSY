@@ -1,51 +1,54 @@
 @import "tailwindcss";
 
 :root {
-  /* Brand red scale — "Medical Trust": bright clinical red to deep elegant dark red */
-  --red-50:  hsl(355 100% 97.3%);
-  --red-100: hsl(355 92% 94%);
-  --red-200: hsl(355 88% 88%);
-  --red-300: hsl(355 82% 78%);
-  --red-400: hsl(355 78% 65%);
-  --red-500: hsl(355 74% 52%);
-  --red-600: hsl(356 72% 44%);
-  --red-700: hsl(357 68% 36%);
-  --red-800: hsl(358 62% 27%);
-  --red-900: hsl(359 55% 17%);
+  /* Sage Green Palette (Premium Light Theme) */
+  --background: #ffffff;
+  --background-soft: #f7f9f5;
+  --surface: #ffffff;
+  --surface-subtle: #eef3ec;
 
-  /* Rust/amber — distinct from brand red, used only for destructive & alert states */
-  --rust-50:  hsl(16 88% 96%);
-  --rust-500: hsl(16 82% 52%);
-  --rust-600: hsl(16 78% 44%);
+  --sage-hint: #dce6d9;
+  --mint: #bfcfbb;
+  --sage: #8ea58c;
+  --moss: #7b8a6e;
+  --evergreen: #344c3d;
 
-  --success-50: hsl(150 65% 96%);
-  --success-500: hsl(152 58% 36%);
-  --success-600: hsl(152 62% 30%);
+  --foreground: #172019;
+  --foreground-secondary: #465149;
+  --muted-foreground: #667169;
 
-  --warning-50: hsl(38 100% 96%);
-  --warning-500: hsl(38 90% 49%);
-  --warning-600: hsl(32 90% 43%);
+  --border: #d5ddd2;
+  --border-strong: #bfcbbb;
 
-  --danger-50: var(--rust-50);
-  --danger-500: var(--rust-500);
-  --danger-600: var(--rust-600);
+  --primary: #344c3d;
+  --primary-hover: #2a3f32;
+  --primary-foreground: #ffffff;
 
-  --info-50: var(--red-50);
-  --info-500: var(--red-500);
-  --info-600: var(--red-600);
+  --secondary: #8ea58c;
+  --secondary-hover: #7b8a6e;
+  --focus: #526f5b;
 
-  /* Controlled Dark Surface Hierarchy */
-  --background: #000000;
-  --surface: #050505; /* Sidebar/topbar or secondary background */
-  --surface-card: #080808; /* Primary cards and panels */
-  --surface-elevated: #0D0D0D; /* Dialogs, dropdowns */
-  
-  --foreground: #FFFFFF;
-  --muted-foreground: #C7C7C7;
-  
-  --border: #2e2e2e;
-  --border-strong: #454545;
-  --ring: var(--red-500);
+  /* Status Colors */
+  --success-50: #f0fdf4;
+  --success-500: #15803d;
+  --success-600: #166534;
+
+  --warning-50: #fffbeb;
+  --warning-500: #d97706;
+  --warning-600: #b45309;
+
+  --danger-50: #fef2f2;
+  --danger-500: #dc2626;
+  --danger-600: #b91c1c;
+
+  --info-50: #eff6ff;
+  --info-500: #3b82f6;
+  --info-600: #2563eb;
+
+  /* Legacy aliases for surface layers to preserve compatibility */
+  --surface-card: #ffffff;
+  --surface-elevated: #ffffff;
+  --ring: var(--focus);
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -61,16 +64,16 @@
 }
 
 @theme inline {
-  --color-brand-50: var(--red-50);
-  --color-brand-100: var(--red-100);
-  --color-brand-200: var(--red-200);
-  --color-brand-300: var(--red-300);
-  --color-brand-400: var(--red-400);
-  --color-brand-500: var(--red-500);
-  --color-brand-600: var(--red-600);
-  --color-brand-700: var(--red-700);
-  --color-brand-800: var(--red-800);
-  --color-brand-900: var(--red-900);
+  --color-brand-50: var(--background-soft);
+  --color-brand-100: var(--surface-subtle);
+  --color-brand-200: var(--sage-hint);
+  --color-brand-300: var(--mint);
+  --color-brand-400: var(--sage);
+  --color-brand-500: var(--moss);
+  --color-brand-600: var(--evergreen);
+  --color-brand-700: var(--primary-hover);
+  --color-brand-800: #1e2d24;
+  --color-brand-900: #131c16;
 
   --color-success-50: var(--success-50);
   --color-success-500: var(--success-500);
@@ -130,18 +133,18 @@ html[dir="rtl"] h3 {
 }
 
 ::selection {
-  background: var(--red-200);
+  background: var(--sage-hint);
 }
 
 :focus-visible {
-  outline: 2px solid var(--red-500);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
   border-radius: 4px;
 }
 
 @utility focus-ring {
   &:focus-visible {
-    outline: 2px solid var(--red-500);
+    outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
 }
@@ -168,7 +171,7 @@ html[dir="rtl"] h3 {
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; }
-::-webkit-scrollbar-thumb:hover { background: var(--red-300); }
+::-webkit-scrollbar-thumb:hover { background: var(--sage); }
 
 @keyframes fade-in-up {
   from { opacity: 0; transform: translateY(8px); }
@@ -237,7 +240,7 @@ html[dir="rtl"] h3 {
 }
 
 .pill-loader .pill-side {
-  background: var(--red-400);
+  background: var(--sage);
   position: relative;
   overflow: hidden;
   width: 70%;
@@ -246,9 +249,9 @@ html[dir="rtl"] h3 {
 }
 
 .pill-loader .pill-side + .pill-side {
-  background: var(--red-700);
+  background: var(--evergreen);
   border-radius: 0 0 6vmin 6vmin;
-  border-top: 1px solid var(--red-900);
+  border-top: 1px solid var(--primary-hover);
   animation: pill-open 2s ease-in-out 0s infinite;
 }
 
@@ -322,7 +325,7 @@ html[dir="rtl"] h3 {
 .pill-loader-dust i {
   width: 5px;
   height: 5px;
-  background: var(--red-500);
+  background: var(--moss);
   border-radius: 100%;
   position: absolute;
   animation: pill-dust 1.75s ease 0s infinite alternate;

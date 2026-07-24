@@ -99,6 +99,14 @@ const dictionaries: Record<Locale, Dict> = {
 
     "forbidden.title": "You don't have access to this page",
     "forbidden.subtitle": "Your account role doesn't have permission to view this resource. Contact your organization admin if you think this is a mistake.",
+
+    "terms.title": "Terms of Service",
+    "terms.subtitle": "Last updated: July 2026",
+    "terms.content": "By using PharmaSY, you agree to these terms. PharmaSY is a B2B platform connecting licensed pharmacies and suppliers. All users must maintain valid licenses. PharmaSY is not responsible for the quality of products exchanged. Misuse of the platform will result in immediate termination.",
+
+    "privacy.title": "Privacy Policy",
+    "privacy.subtitle": "Last updated: July 2026",
+    "privacy.content": "PharmaSY collects necessary business information to facilitate transactions. We do not sell your data. Organization data, including order volume and inventory, is strictly isolated and never shared with competitors. We use secure cookies for authentication.",
   },
   ar: {
     "nav.home": "الرئيسية",
@@ -185,6 +193,14 @@ const dictionaries: Record<Locale, Dict> = {
 
     "forbidden.title": "لا تملك صلاحية الوصول لهذه الصفحة",
     "forbidden.subtitle": "دور حسابك لا يملك صلاحية عرض هذا المورد. تواصل مع مسؤول منظمتك إذا كنت تعتقد أن هذا خطأ.",
+
+    "terms.title": "شروط الخدمة",
+    "terms.subtitle": "آخر تحديث: تموز 2026",
+    "terms.content": "باستخدامك لـ PharmaSY، فإنك توافق على هذه الشروط. المنصة مخصصة لربط الصيدليات المرخصة والموردين. يجب على جميع المستخدمين الحفاظ على تراخيص سارية. المنصة غير مسؤولة عن جودة المنتجات المتبادلة. سوء الاستخدام سيؤدي إلى الإيقاف الفوري.",
+
+    "privacy.title": "سياسة الخصوصية",
+    "privacy.subtitle": "آخر تحديث: تموز 2026",
+    "privacy.content": "تجمع PharmaSY معلومات العمل الضرورية لتسهيل المعاملات. نحن لا نبيع بياناتك. بيانات المنظمة، بما في ذلك حجم الطلبات والمخزون، معزولة تماماً ولا يتم مشاركتها مع المنافسين. نستخدم ملفات تعريف ارتباط آمنة للمصادقة.",
   },
 };
 

@@ -31,7 +31,7 @@ export const EditorialButton = React.forwardRef<HTMLAnchorElement | HTMLButtonEl
       isAr ? "" : "tracking-[0.15em]",
       isPrimary 
         ? "border-brand-600 bg-brand-600 text-white" 
-        : "border-[#3a3a3a] bg-transparent text-white",
+        : "border-brand-600 bg-transparent text-brand-600",
       className
     );
 
@@ -46,7 +46,7 @@ export const EditorialButton = React.forwardRef<HTMLAnchorElement | HTMLButtonEl
         />
         
         {/* Content Layer */}
-        <span className="relative z-10 flex items-center gap-3">
+        <span className="relative z-10 flex items-center gap-3 transition-colors duration-500 group-hover:text-white group-focus-visible:text-white">
           {children}
           {showArrow && (
             <ArrowRight className={cn("size-4 transition-transform group-hover:translate-x-1", isAr ? "rotate-180 group-hover:-translate-x-1" : "")} />

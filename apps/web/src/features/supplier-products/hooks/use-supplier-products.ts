@@ -19,3 +19,19 @@ export function useToggleSupplierProductAvailability() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: supplierProductsQueryKeys.all }),
   });
 }
+
+export function useUpsertSupplierProduct() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: any) => supplierProductsRepository.upsert(payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: supplierProductsQueryKeys.all }),
+  });
+}
+
+export function useRemoveSupplierProduct() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => supplierProductsRepository.remove(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: supplierProductsQueryKeys.all }),
+  });
+}

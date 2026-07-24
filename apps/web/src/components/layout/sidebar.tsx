@@ -42,21 +42,21 @@ export function SidebarNav({ sections, roleLabel, homeHref, onNavigate }: Sideba
         <div className="flex size-7 items-center justify-center rounded-[var(--radius-sm)] bg-brand-600 text-white">
           <PillIcon className="size-4" />
         </div>
-        <span className="text-[15px] font-semibold tracking-tight">PharmaSY</span>
+        <span className="text-[15px] font-semibold tracking-tight text-white">PharmaSY</span>
       </Link>
 
       <div className="border-b border-border px-5 py-3">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-brand-200/70">
           Workspace
         </p>
-        <p className="text-[13px] font-medium text-foreground">{roleLabel}</p>
+        <p className="text-[13px] font-medium text-white">{roleLabel}</p>
       </div>
 
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
         {sections.map((section, i) => (
           <div key={i}>
             {section.title && (
-              <p className="px-2.5 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              <p className="px-2.5 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-brand-200/70">
                 {section.title}
               </p>
             )}
@@ -72,14 +72,14 @@ export function SidebarNav({ sections, roleLabel, homeHref, onNavigate }: Sideba
                     className={cn(
                       "group flex cursor-pointer items-center gap-2.5 rounded-[var(--radius-sm)] border-s-2 border-s-transparent px-2.5 py-2 text-[13.5px] font-medium transition-colors duration-200",
                       active
-                        ? "border-s-brand-500 bg-[#1a1a1a] text-white"
-                        : "text-muted-foreground hover:bg-surface-elevated hover:text-white"
+                        ? "border-s-brand-300 bg-brand-800 text-white"
+                        : "text-brand-200/70 hover:bg-brand-800 hover:text-white"
                     )}
                   >
                     <Icon
                       className={cn(
                         "size-4",
-                        active ? "text-brand-500" : "text-muted-foreground group-hover:text-white"
+                        active ? "text-brand-300" : "text-brand-200/70 group-hover:text-white"
                       )}
                     />
                     <span className="flex-1">{item.label}</span>
@@ -108,7 +108,7 @@ export function SidebarNav({ sections, roleLabel, homeHref, onNavigate }: Sideba
 export function Sidebar({ sections, roleLabel }: { sections: NavSection[]; roleLabel: string }) {
   const homeHref = sections[0]?.items[0]?.href ?? "/";
   return (
-    <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-surface md:flex">
+    <aside className="hidden w-64 shrink-0 flex-col border-r border-brand-800 bg-brand-900 md:flex">
       <SidebarNav sections={sections} roleLabel={roleLabel} homeHref={homeHref} />
     </aside>
   );

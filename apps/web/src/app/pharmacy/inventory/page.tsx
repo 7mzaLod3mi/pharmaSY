@@ -10,8 +10,11 @@ import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Boxes, AlertTriangle, PackageX, TrendingDown, Search, Plus, PackageOpen } from "lucide-react";
+import { Boxes, AlertTriangle, PackageX, TrendingDown, Search, Plus, PackageOpen, LayoutList } from "lucide-react";
 import { useInventoryOverview, useInventoryProducts } from "@/features/inventory/hooks/use-inventory";
+import { ProductBatchesDialog } from "@/features/inventory/components/product-batches-dialog";
+import { useState } from "react";
+import Link from "next/link";
 
 function nearestExpiry(batches: { expiryDate: string; status: string }[]) {
   const usable = batches.filter((b) => b.status !== "expired").sort((a, b) => a.expiryDate.localeCompare(b.expiryDate));
@@ -22,6 +25,7 @@ function nearestExpiry(batches: { expiryDate: string; status: string }[]) {
 export default function PharmacyInventoryPage() {
   const { data: overview, isLoading: overviewLoading } = useInventoryOverview();
   const { data: products, isLoading: productsLoading } = useInventoryProducts();
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
   return (
     <DashboardShell sections={pharmacyNav} roleLabel="Pharmacy" userName="Sara Ahmad">
@@ -29,9 +33,18 @@ export default function PharmacyInventoryPage() {
         title="Inventory"
         description="Monitor stock levels and expiry across your pharmacy — available and reserved quantities are tracked separately, batch by batch."
         actions={
-          <Button>
-            <Plus className="size-4" /> Add stock entry
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="secondary" asChild>
+              <Link href="/pharmacy/inventory/alerts">
+                <AlertTriangle className="size-4 mr-2" /> Alerts
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/pharmacy/marketplace">
+                <Plus className="size-4 mr-2" /> Purchase stock
+              </Link>
+            </Button>
+          </div>
         }
       />
 
@@ -108,12 +121,23 @@ export default function PharmacyInventoryPage() {
                         {status.label}
                       </Badge>
                     </TD>
+                    <TD className="text-right">
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedProduct(item)}>
+                        Manage
+                      </Button>
+                    </TD>
                   </TR>
                 );
               })}
           </TBody>
         </Table>
       </Card>
+      
+      <ProductBatchesDialog 
+        product={selectedProduct} 
+        isOpen={!!selectedProduct} 
+        onClose={() => setSelectedProduct(null)} 
+      />
     </DashboardShell>
   );
 }

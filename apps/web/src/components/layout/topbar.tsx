@@ -35,7 +35,7 @@ export function Topbar({
       <button
         onClick={onMenuClick}
         aria-label="Open menu"
-        className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] text-muted-foreground transition-colors duration-200 hover:bg-white/[0.05] md:hidden"
+        className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] text-muted-foreground transition-colors duration-200 hover:bg-brand-50 md:hidden"
       >
         <Menu className="size-4.5" />
       </button>
@@ -47,7 +47,7 @@ export function Topbar({
 
       <div className="flex items-center gap-2">
         <DropdownMenu>
-          <DropdownMenuTrigger className="hidden h-9 cursor-pointer items-center gap-1.5 rounded-[var(--radius-sm)] border border-border-strong px-2.5 text-[13px] font-medium text-foreground transition-colors duration-200 hover:bg-white/[0.05] focus:outline-none sm:flex">
+          <DropdownMenuTrigger className="hidden h-9 cursor-pointer items-center gap-1.5 rounded-[var(--radius-sm)] border border-border-strong px-2.5 text-[13px] font-medium text-foreground transition-colors duration-200 hover:bg-brand-50 focus:outline-none sm:flex">
             <Globe className="size-4" />
             {locale === "en" ? "EN" : "AR"}
             <ChevronDown className="size-3.5 text-muted-foreground" />
@@ -61,7 +61,7 @@ export function Topbar({
         <NotificationBell notificationsHref={notificationsHref} />
 
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex cursor-pointer items-center gap-2.5 rounded-[var(--radius-sm)] border border-border-strong py-1.5 ps-1.5 pe-2.5 transition-colors duration-200 hover:bg-white/[0.05] focus:outline-none">
+          <DropdownMenuTrigger className="flex cursor-pointer items-center gap-2.5 rounded-[var(--radius-sm)] border border-border-strong py-1.5 ps-1.5 pe-2.5 transition-colors duration-200 hover:bg-brand-50 focus:outline-none">
             <div className="flex size-6.5 items-center justify-center rounded-full bg-brand-600 text-[11px] font-semibold text-white">
               {userName.charAt(0)}
             </div>
@@ -82,7 +82,7 @@ export function Topbar({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onSelect={() => void logout().then(() => router.replace("/login"))}
-              className="text-danger-500 data-[highlighted]:bg-[#1a0a0a] data-[highlighted]:text-danger-400"
+              className="text-danger-600 data-[highlighted]:bg-danger-50 data-[highlighted]:text-danger-700"
             >
               <LogOut className="size-4" /> Log out
             </DropdownMenuItem>

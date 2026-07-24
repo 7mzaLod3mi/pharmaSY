@@ -8,7 +8,7 @@ export default function ForbiddenPage() {
   const { t } = useLocale();
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center">
-      <div className="flex size-14 items-center justify-center rounded-[var(--radius-lg)] bg-[#111] border border-[#2e2e2e] text-danger-500">
+      <div className="flex size-14 items-center justify-center rounded-[var(--radius-lg)] bg-danger-50 border border-danger-100 text-danger-500">
         <ShieldAlert className="size-6" />
       </div>
       <p className="mt-6 text-[13px] font-semibold uppercase tracking-wide text-danger-500">403</p>

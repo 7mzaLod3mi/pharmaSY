@@ -8,7 +8,7 @@ export default function NotFound() {
   const { t } = useLocale();
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center">
-      <div className="flex size-14 items-center justify-center rounded-[var(--radius-lg)] bg-[#111] border border-[#2e2e2e] text-brand-500">
+      <div className="flex size-14 items-center justify-center rounded-[var(--radius-lg)] bg-brand-50 border border-brand-200 text-brand-600">
         <Compass className="size-6" />
       </div>
       <p className="mt-6 text-[13px] font-semibold uppercase tracking-wide text-brand-500">404</p>

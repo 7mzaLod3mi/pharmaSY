@@ -43,15 +43,15 @@ export function PublicHeader() {
       className={cn(
         "fixed top-0 z-50 w-full transition-all duration-300",
         scrolled 
-          ? "bg-black/90 backdrop-blur-md py-3 lg:py-4" 
+          ? "bg-white/90 backdrop-blur-md py-3 lg:py-4 shadow-sm" 
           : "bg-transparent py-5 lg:py-6"
       )}
     >
       {/* Ultra-thin hairline border mimicking the cards */}
       <div 
         className={cn(
-          "absolute bottom-0 left-0 w-full h-[1px] bg-[#454545] origin-bottom transition-all duration-300",
-          scrolled ? "opacity-100 scale-y-[0.6]" : "opacity-0 scale-y-0"
+          "absolute bottom-0 left-0 w-full h-[1px] bg-border origin-bottom transition-all duration-300",
+          scrolled ? "opacity-100 scale-y-100" : "opacity-0 scale-y-0"
         )} 
       />
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
@@ -59,7 +59,7 @@ export function PublicHeader() {
           <div className="flex size-7 items-center justify-center rounded-[var(--radius-sm)] bg-brand-600 text-white">
             <PillIcon className="size-4" />
           </div>
-          <span className="text-[15px] font-semibold tracking-tight">PharmaSY</span>
+          <span className="text-[15px] font-semibold tracking-tight text-foreground">PharmaSY</span>
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
@@ -68,9 +68,9 @@ export function PublicHeader() {
                 key={l.href}
                 href={l.href}
                 className={cn(
-                  "relative px-4 py-2 text-[11.5px] font-bold uppercase transition-colors hover:text-white link-underline",
+                  "relative px-4 py-2 text-[11.5px] font-bold uppercase transition-colors hover:text-brand-600 link-underline",
                   locale === "ar" ? "" : "tracking-[0.15em]",
-                  scrolled ? "text-[#C7C7C7]" : "text-white"
+                  scrolled ? "text-foreground" : "text-brand-900"
                 )}
               >
                 {l.label}
@@ -80,17 +80,17 @@ export function PublicHeader() {
 
         <div className="flex items-center gap-2">
           <DropdownMenu>
-            <DropdownMenuTrigger className="hidden h-9 cursor-pointer items-center gap-1.5 rounded-none px-2 text-[13px] font-medium text-[#C7C7C7] transition-colors duration-200 hover:text-white focus:outline-none sm:flex">
+            <DropdownMenuTrigger className="hidden h-9 cursor-pointer items-center gap-1.5 rounded-none px-2 text-[13px] font-medium text-foreground transition-colors duration-200 hover:text-brand-600 focus:outline-none sm:flex">
               <Globe className="size-4" />
               {locale === "ar" ? "AR" : "EN"}
-              <ChevronDown className="size-3.5 text-[#C7C7C7]" />
+              <ChevronDown className="size-3.5 text-muted-foreground" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-black border-[#2a2a2a] text-[#C7C7C7]">
-              <DropdownMenuItem onSelect={() => setLocale("ar")} className="cursor-pointer text-white focus:bg-white/10 focus:text-white">العربية</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setLocale("en")} className="cursor-pointer text-white focus:bg-white/10 focus:text-white">English</DropdownMenuItem>
+            <DropdownMenuContent align="end" className="bg-white border-border text-foreground">
+              <DropdownMenuItem onSelect={() => setLocale("ar")} className="cursor-pointer text-foreground focus:bg-brand-50 focus:text-brand-600">العربية</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLocale("en")} className="cursor-pointer text-foreground focus:bg-brand-50 focus:text-brand-600">English</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="ghost" size="sm" className="hidden sm:inline-flex text-[11.5px] font-bold uppercase tracking-[0.15em] text-[#C7C7C7] hover:bg-transparent hover:text-white" asChild>
+          <Button variant="ghost" size="sm" className="hidden sm:inline-flex text-[11.5px] font-bold uppercase tracking-[0.15em] text-foreground hover:bg-transparent hover:text-brand-600" asChild>
             <Link href="/login">{t.nav.login}</Link>
           </Button>
           <EditorialButton 
@@ -105,7 +105,7 @@ export function PublicHeader() {
           <button
             aria-label="Menu"
             onClick={() => setMobileOpen((v) => !v)}
-            className="flex size-9 cursor-pointer items-center justify-center rounded-none text-[#C7C7C7] hover:text-white transition-colors duration-200 md:hidden"
+            className="flex size-9 cursor-pointer items-center justify-center rounded-none text-foreground hover:text-brand-600 transition-colors duration-200 md:hidden"
           >
             {mobileOpen ? <X className="size-5" /> : <Menu className="size-5" />}
           </button>
@@ -119,7 +119,7 @@ export function PublicHeader() {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="overflow-hidden border-t border-white/10 bg-[#0a0a0a] md:hidden"
+            className="overflow-hidden border-t border-border bg-white md:hidden"
           >
             <div className="flex flex-col gap-1 px-6 py-4">
               {links.map((l) => (
@@ -127,13 +127,13 @@ export function PublicHeader() {
                   key={l.href}
                   href={l.href}
                   onClick={() => setMobileOpen(false)}
-                  className="rounded-none px-3 py-2.5 text-[14px] font-medium text-[#C7C7C7] hover:text-white"
+                  className="rounded-none px-3 py-2.5 text-[14px] font-medium text-foreground hover:text-brand-600"
                 >
                   {l.label}
                 </Link>
               ))}
-              <div className="mt-2 flex items-center gap-2 border-t border-[#2a2a2a] pt-3">
-                <Button variant="ghost" size="sm" className="flex-1 text-[11.5px] font-bold uppercase tracking-[0.15em] text-[#C7C7C7] hover:bg-transparent hover:text-white" asChild>
+              <div className="mt-2 flex items-center gap-2 border-t border-border pt-3">
+                <Button variant="ghost" size="sm" className="flex-1 text-[11.5px] font-bold uppercase tracking-[0.15em] text-foreground hover:bg-transparent hover:text-brand-600" asChild>
                   <Link href="/login">{t.nav.login}</Link>
                 </Button>
                 <EditorialButton 
@@ -147,7 +147,7 @@ export function PublicHeader() {
               </div>
               <button
                 onClick={() => setLocale(locale === "ar" ? "en" : "ar")}
-                className="mt-1 flex cursor-pointer items-center gap-1.5 self-start rounded-none px-3 py-2 text-[11.5px] font-bold uppercase tracking-[0.15em] text-[#C7C7C7] transition-colors duration-200 hover:bg-transparent hover:text-white"
+                className="mt-1 flex cursor-pointer items-center gap-1.5 self-start rounded-none px-3 py-2 text-[11.5px] font-bold uppercase tracking-[0.15em] text-foreground transition-colors duration-200 hover:bg-transparent hover:text-brand-600"
               >
                 <Globe className="size-4" /> {locale === "ar" ? "English" : "العربية"}
               </button>

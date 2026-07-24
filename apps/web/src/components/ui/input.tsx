@@ -10,7 +10,7 @@ export const Input = forwardRef<
     className={cn(
       "flex h-10 w-full rounded-[var(--radius-sm)] border border-border bg-transparent px-3.5 py-2 text-sm text-foreground placeholder:text-muted-foreground/50",
       "transition-[border-color] duration-200",
-      "focus-visible:outline-none focus-visible:border-brand-500 focus-visible:ring-1 focus-visible:ring-brand-500",
+      "focus-visible:outline-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring",
       "disabled:cursor-not-allowed disabled:opacity-50",
       className
     )}

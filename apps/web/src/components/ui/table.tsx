@@ -13,7 +13,7 @@ export function THead({ className, ...props }: HTMLAttributes<HTMLTableSectionEl
   return (
     <thead
       className={cn(
-        "sticky top-0 z-10 bg-surface-card/95 backdrop-blur",
+        "sticky top-0 z-10 bg-brand-50/95 backdrop-blur",
         className
       )}
       {...props}
@@ -26,14 +26,14 @@ export function TBody({ className, ...props }: HTMLAttributes<HTMLTableSectionEl
 }
 
 export function TR({ className, ...props }: HTMLAttributes<HTMLTableRowElement>) {
-  return <tr className={cn("transition-colors hover:bg-[#111]", className)} {...props} />;
+  return <tr className={cn("transition-colors hover:bg-brand-50", className)} {...props} />;
 }
 
 export function TH({ className, ...props }: ThHTMLAttributes<HTMLTableCellElement>) {
   return (
     <th
       className={cn(
-        "border-b border-border px-4 py-3 text-left text-[12px] font-medium uppercase tracking-wide text-muted-foreground",
+        "border-b border-border px-4 py-3 text-left text-[12px] font-semibold uppercase tracking-wide text-brand-600",
         className
       )}
       {...props}

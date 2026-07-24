@@ -49,4 +49,11 @@ export const ordersHttpRepository: OrdersRepository = {
     const order = await apiRequest<RawOrder>({ method: "GET", url: `/orders/${id}` });
     return mapOrder(order);
   },
+  async cancelOrder(id: string) {
+    await apiRequest({
+      method: "PATCH",
+      url: `/orders/${id}/status`,
+      data: { status: "CANCELLED" },
+    });
+  },
 };

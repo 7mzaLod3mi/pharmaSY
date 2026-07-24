@@ -1,0 +1,180 @@
+"use client";
+
+import { use } from "react";
+import { toast } from "sonner";
+import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { supplierNav } from "@/lib/nav-config";
+import { PageHeader } from "@/components/shared/page-header";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TBody,
+  TD,
+  TH,
+  THead,
+  TR,
+} from "@/components/ui/table";
+import { Loader2, ArrowLeft, Printer } from "lucide-react";
+import { useSupplierOrderDetails, useUpdateSupplierOrderStatus } from "@/features/supplier-orders/hooks/use-supplier-orders";
+import { nextSupplierOrderStatus, type SupplierOrderStatus } from "@/features/supplier-orders/api/supplier-orders.types";
+import Link from "next/link";
+
+const statusVariant: Record<SupplierOrderStatus, "info" | "brand" | "success" | "danger" | "warning"> = {
+  pending: "warning",
+  confirmed: "brand",
+  processing: "info",
+  shipped: "success",
+  delivered: "success",
+  cancelled: "danger",
+};
+
+const actionLabel: Record<SupplierOrderStatus, string> = {
+  pending: "Confirm order",
+  confirmed: "Start processing",
+  processing: "Mark shipped",
+  shipped: "Mark delivered",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+};
+
+export default function SupplierOrderDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const { data: order, isLoading } = useSupplierOrderDetails(id);
+  const updateStatus = useUpdateSupplierOrderStatus();
+
+  if (isLoading) {
+    return (
+      <DashboardShell sections={supplierNav} roleLabel="Supplier" userName="Supplier">
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="size-8 animate-spin text-muted-foreground" />
+        </div>
+      </DashboardShell>
+    );
+  }
+
+  if (!order) {
+    return (
+      <DashboardShell sections={supplierNav} roleLabel="Supplier" userName="Supplier">
+        <PageHeader title="Order not found" />
+      </DashboardShell>
+    );
+  }
+
+  const oStatus = order.status.toLowerCase() as SupplierOrderStatus;
+  const next = nextSupplierOrderStatus[oStatus];
+
+  return (
+    <DashboardShell sections={supplierNav} roleLabel="Supplier" userName="Supplier">
+      <div className="mb-4">
+        <Link href="/supplier/orders" className="flex items-center text-sm font-medium text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="mr-2 size-4" /> Back to orders
+        </Link>
+      </div>
+      
+      <PageHeader
+        title={`Order ${order.orderNumber || order.id.slice(0, 8)}`}
+        description={`Placed on ${new Date(order.createdAt).toLocaleString()} by ${order.pharmacy?.name}`}
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => window.print()}>
+              <Printer className="size-4" /> Print Invoice
+            </Button>
+            {next && (
+              <Button
+                onClick={() => {
+                  updateStatus.mutate({ id: order.id, status: next });
+                  toast.success(`Order marked as ${next}`);
+                }}
+                disabled={updateStatus.isPending}
+              >
+                {updateStatus.isPending ? "Updating..." : actionLabel[oStatus]}
+              </Button>
+            )}
+          </>
+        }
+      />
+
+      <div className="mt-6 grid gap-6 md:grid-cols-3">
+        <div className="md:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Order Items</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <THead>
+                  <TR>
+                    <TH>Product</TH>
+                    <TH>Unit Price</TH>
+                    <TH>Qty</TH>
+                    <TH className="text-right">Total</TH>
+                  </TR>
+                </THead>
+                <TBody>
+                  {order.items?.map((item: any) => (
+                    <TR key={item.id}>
+                      <TD>
+                        <div className="font-medium">{item.productNameAr || "Product"}</div>
+                        <div className="text-xs text-muted-foreground">{item.productNameEn}</div>
+                      </TD>
+                      <TD>${Number(item.price).toFixed(2)}</TD>
+                      <TD>{item.quantity}</TD>
+                      <TD className="text-right font-medium">
+                        ${(Number(item.price) * item.quantity).toFixed(2)}
+                      </TD>
+                    </TR>
+                  ))}
+                  <TR>
+                    <TD colSpan={3} className="text-right font-medium">
+                      Subtotal
+                    </TD>
+                    <TD className="text-right font-bold">
+                      ${Number(order.totalAmount).toFixed(2)}
+                    </TD>
+                  </TR>
+                </TBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Order Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-3">
+                <Badge variant={statusVariant[oStatus]} className="text-sm px-3 py-1">
+                  {oStatus.toUpperCase()}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Pharmacy Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div>
+                <p className="text-muted-foreground">Pharmacy</p>
+                <p className="font-medium">{order.pharmacy?.name}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Contact</p>
+                <p>{order.pharmacy?.contactEmail || "N/A"}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Address</p>
+                <p>{order.pharmacy?.address || "N/A"}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </DashboardShell>
+  );
+}

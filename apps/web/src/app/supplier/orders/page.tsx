@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, PackageX } from "lucide-react";
+import { Download, PackageX, Eye } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useSupplierOrders, useUpdateSupplierOrderStatus } from "@/features/supplier-orders/hooks/use-supplier-orders";
 import { nextSupplierOrderStatus, type SupplierOrderStatus } from "@/features/supplier-orders/api/supplier-orders.types";
 
@@ -34,6 +35,7 @@ const actionLabel: Record<SupplierOrderStatus, string> = {
 };
 
 export default function SupplierOrdersPage() {
+  const router = useRouter();
   const [tab, setTab] = useState<"all" | SupplierOrderStatus>("all");
   const { data: orders, isLoading } = useSupplierOrders({ status: tab === "all" ? undefined : tab });
   const updateStatus = useUpdateSupplierOrderStatus();
@@ -95,7 +97,11 @@ export default function SupplierOrdersPage() {
               orders?.map((o) => {
                 const next = nextSupplierOrderStatus[o.status];
                 return (
-                  <TR key={o.id}>
+                  <TR 
+                    key={o.id} 
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => router.push(`/supplier/orders/${o.id}`)}
+                  >
                     <TD className="font-medium">{o.orderNumber ?? o.id}</TD>
                     <TD className="text-muted-foreground">{o.pharmacyName}</TD>
                     <TD className="text-muted-foreground">
@@ -109,18 +115,28 @@ export default function SupplierOrdersPage() {
                       </Badge>
                     </TD>
                     <TD>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        disabled={!next}
-                        onClick={() => {
-                          if (!next) return;
-                          updateStatus.mutate({ id: o.id, status: next });
-                          toast.success(`${o.orderNumber ?? o.id} marked as ${next}`);
-                        }}
-                      >
-                        {actionLabel[o.status]}
-                      </Button>
+                      <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          disabled={!next}
+                          onClick={() => {
+                            if (!next) return;
+                            updateStatus.mutate({ id: o.id, status: next });
+                            toast.success(`${o.orderNumber ?? o.id} marked as ${next}`);
+                          }}
+                        >
+                          {actionLabel[o.status]}
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="size-8 text-muted-foreground hover:text-foreground"
+                          onClick={() => router.push(`/supplier/orders/${o.id}`)}
+                        >
+                          <Eye className="size-4" />
+                        </Button>
+                      </div>
                     </TD>
                   </TR>
                 );

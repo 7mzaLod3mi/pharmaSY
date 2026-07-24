@@ -18,37 +18,43 @@ import {
   Plus,
 } from "lucide-react";
 
-const recentOrders = [
-  { id: "PO-4821", supplier: "Nova Pharma", items: 14, total: "$2,140.00", status: "processing" as const },
-  { id: "PO-4820", supplier: "MedCore Distribution", items: 6, total: "$860.50", status: "delivered" as const },
-  { id: "PO-4819", supplier: "Vitalis Supply", items: 22, total: "$3,412.00", status: "pending" as const },
-  { id: "PO-4818", supplier: "Al-Shifa Group", items: 3, total: "$210.00", status: "delivered" as const },
-];
+import Link from "next/link";
+import { useInventoryOverview, useExpiryAlerts } from "@/features/inventory/hooks/use-inventory";
+import { useOrders } from "@/features/orders/hooks/use-orders";
 
 const statusVariant = {
   processing: "info",
   delivered: "success",
   pending: "warning",
+  confirmed: "info",
+  shipped: "info",
+  cancelled: "danger",
 } as const;
 
 export default function PharmacyDashboardPage() {
+  const { data: inventory } = useInventoryOverview();
+  const { data: expiryAlerts, isLoading: expiryLoading } = useExpiryAlerts(30);
+  const { data: orders, isLoading: ordersLoading } = useOrders();
+  
+  const recentOrders = orders?.slice(0, 5);
+
   return (
-    <DashboardShell sections={pharmacyNav} roleLabel="Pharmacy" userName="Sara Ahmad">
+    <DashboardShell sections={pharmacyNav} roleLabel="Pharmacy" userName="Pharmacy">
       <PageHeader
         title="Dashboard"
         description="Here's what's happening across your pharmacy today."
         actions={
-          <Button>
-            <Store className="size-4" /> Browse marketplace
+          <Button asChild>
+            <Link href="/pharmacy/marketplace"><Store className="size-4 mr-2" /> Browse marketplace</Link>
           </Button>
         }
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Open orders" value="18" animatedValue={18} delta={{ value: "+4", direction: "up" }} icon={ClipboardList} />
-        <StatCard label="Inventory value" value="$84,320" animatedValue={84320} format="currency" delta={{ value: "+2.1%", direction: "up" }} icon={Boxes} />
-        <StatCard label="Expiry alerts" value="5 SKUs" animatedValue={5} suffix=" SKUs" delta={{ value: "+2", direction: "up", positive: false }} icon={AlertTriangle} />
-        <StatCard label="Monthly spend" value="$21,940" animatedValue={21940} format="currency" delta={{ value: "-6.3%", direction: "down", positive: true }} icon={Wallet} />
+        <StatCard label="Open orders" value={orders?.filter(o => o.status === 'pending').length.toString() || "0"} animatedValue={orders?.filter(o => o.status === 'pending').length || 0} icon={ClipboardList} />
+        <StatCard label="Inventory value" value={`$${inventory?.totalInventoryValue?.toLocaleString() || "0"}`} animatedValue={inventory?.totalInventoryValue || 0} format="currency" icon={Boxes} />
+        <StatCard label="Expiry alerts" value={`${inventory?.nearExpiryCount || 0} SKUs`} animatedValue={inventory?.nearExpiryCount || 0} suffix=" SKUs" icon={AlertTriangle} />
+        <StatCard label="Monthly spend" value="$0" animatedValue={0} format="currency" icon={Wallet} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -73,14 +79,18 @@ export default function PharmacyDashboardPage() {
               </TR>
             </THead>
             <TBody>
-              {recentOrders.map((o) => (
+              {ordersLoading ? (
+                <TR><TD colSpan={5} className="text-center py-4 text-muted-foreground">Loading orders...</TD></TR>
+              ) : recentOrders?.length === 0 ? (
+                <TR><TD colSpan={5} className="text-center py-4 text-muted-foreground">No recent orders found.</TD></TR>
+              ) : recentOrders?.map((o: any) => (
                 <TR key={o.id}>
-                  <TD className="font-medium">{o.id}</TD>
-                  <TD className="text-muted-foreground">{o.supplier}</TD>
-                  <TD className="text-muted-foreground">{o.items}</TD>
-                  <TD>{o.total}</TD>
+                  <TD className="font-medium">{o.orderNumber || o.id.slice(0, 8)}</TD>
+                  <TD className="text-muted-foreground">{o.supplierName}</TD>
+                  <TD className="text-muted-foreground">{o.itemCount}</TD>
+                  <TD>${Number(o.total).toFixed(2)}</TD>
                   <TD>
-                    <Badge variant={statusVariant[o.status]} dot>
+                    <Badge variant={statusVariant[o.status as keyof typeof statusVariant] || 'info'} dot>
                       {o.status}
                     </Badge>
                   </TD>
@@ -95,24 +105,25 @@ export default function PharmacyDashboardPage() {
             <CardTitle>Expiry alerts</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {[
-              { name: "Amoxicillin 500mg", days: 12 },
-              { name: "Insulin Glargine", days: 21 },
-              { name: "Paracetamol Syrup", days: 30 },
-            ].map((item) => (
+            {expiryLoading ? (
+              <p className="text-sm text-muted-foreground">Loading alerts...</p>
+            ) : expiryAlerts?.slice(0, 3).map((item: any) => {
+              const diffTime = Math.max(0, new Date(item.expiryDate).getTime() - Date.now());
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              return (
               <div
-                key={item.name}
+                key={item.id}
                 className="flex items-center justify-between rounded-[var(--radius-md)] border border-border px-3 py-2.5"
               >
                 <div>
-                  <p className="text-[13.5px] font-medium">{item.name}</p>
-                  <p className="text-[12px] text-muted-foreground">Expires in {item.days} days</p>
+                  <p className="text-[13.5px] font-medium">{item.productNameAr || item.product?.tradeNameAr || "Product"}</p>
+                  <p className="text-[12px] text-muted-foreground">Expires in {diffDays} days</p>
                 </div>
-                <Badge variant="warning">Act soon</Badge>
+                <Badge variant={diffDays <= 0 ? "danger" : "warning"}>{diffDays <= 0 ? "Expired" : "Act soon"}</Badge>
               </div>
-            ))}
-            <Button variant="ghost" size="sm" className="w-full justify-center">
-              <Plus className="size-4" /> Create reorder
+            )})}
+            <Button variant="ghost" size="sm" className="w-full justify-center" asChild>
+              <Link href="/pharmacy/marketplace"><Plus className="size-4 mr-2" /> Purchase stock</Link>
             </Button>
           </CardContent>
         </Card>

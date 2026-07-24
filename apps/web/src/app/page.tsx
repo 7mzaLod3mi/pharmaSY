@@ -28,7 +28,7 @@ export default function HomePage() {
   const headingFontClass = isAr ? "font-[family-name:var(--font-cairo)] font-bold" : "font-serif";
 
   return (
-    <div className="min-h-screen bg-black text-white selection:bg-brand-600/30 font-sans">
+    <div className="min-h-screen bg-white text-foreground selection:bg-brand-600/30 font-sans">
       <PublicHeader />
 
       {/* Cinematic Hero Section */}
@@ -41,17 +41,17 @@ export default function HomePage() {
             alt="Pharmacy network background" 
             className="h-full w-full object-cover"
           />
-          <div className="absolute inset-0 bg-black/80" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+          <div className="absolute inset-0 bg-white/70" />
+          <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent" />
         </div>
 
         <div className="relative z-10 mx-auto flex min-h-[60vh] w-full max-w-[1800px] flex-col justify-end px-[3vw] lg:px-[3.5vw] mt-20">
           <motion.div style={{ y: titleY, opacity: titleOpacity }}>
             <DirectionalReveal direction="up" distance={20} delay={0.5} className="max-w-4xl">
-              <h1 className={cn("text-5xl sm:text-6xl md:text-7xl lg:text-[6.5rem] tracking-tight leading-[1.05] text-white", headingFontClass)}>
+              <h1 className={cn("text-5xl sm:text-6xl md:text-7xl lg:text-[6.5rem] tracking-tight leading-[1.05] text-brand-900", headingFontClass)}>
                 {isAr ? "عمليات متكاملة." : "Seamless operations."}
                 <br />
-                <span className="text-[#C7C7C7]">
+                <span className="text-brand-600">
                   {isAr ? "يربط صيدليتك بالشبكة." : "Connecting your pharmacy."}
                 </span>
               </h1>
@@ -60,7 +60,7 @@ export default function HomePage() {
 
           <motion.div style={{ opacity: textOpacity }}>
             <DirectionalReveal direction="up" distance={20} delay={0.7} className="mt-8 max-w-2xl">
-              <p className="text-[17px] sm:text-[19px] leading-relaxed text-[#C7C7C7] font-light">
+              <p className="text-[17px] sm:text-[19px] leading-relaxed text-muted-foreground font-light">
                 {isAr 
                   ? "عندما تتوفر الأدوية في صيدلية، يمكن لأخرى إيجادها. منصة أعمال متكاملة تدعم تبادل الأدوية، تتبع المخزون، والحد من النواقص بشكل آمن وفعّال."
                   : "When one pharmacy has it, another pharmacy can find it. A definitive B2B platform for safe medicine exchange, real-time inventory visibility, and shortage prevention."}
@@ -77,7 +77,7 @@ export default function HomePage() {
       </section>
 
       {/* Split Section 1: Pharmacy Exchange */}
-      <section className="py-24 lg:py-32 bg-black">
+      <section className="py-24 lg:py-32 bg-white">
         <div className="mx-auto w-full max-w-[1800px] px-[3vw] lg:px-[3.5vw] grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-[4vw] items-center">
           {/* Image Half: Left */}
           <div className="lg:col-span-5 relative aspect-[3/4] w-full overflow-hidden">
@@ -95,12 +95,12 @@ export default function HomePage() {
           {/* Text Half: Right */}
           <div className="lg:col-span-7 flex flex-col justify-center max-w-2xl ltr:lg:ml-auto rtl:lg:mr-auto lg:px-[2vw]">
             <MaskUpReveal>
-              <h2 className={cn("text-4xl md:text-5xl lg:text-6xl tracking-tight leading-[1.1] text-white", headingFontClass)}>
+              <h2 className={cn("text-4xl md:text-5xl lg:text-6xl tracking-tight leading-[1.1] text-brand-900", headingFontClass)}>
                 {isAr ? "تبادل آمن بين الصيدليات." : "Safe pharmacy-to-pharmacy exchange."}
               </h2>
             </MaskUpReveal>
             <DirectionalReveal direction="up" distance={15} delay={0.2}>
-              <p className="mt-8 text-[17px] leading-relaxed text-[#C7C7C7] font-light">
+              <p className="mt-8 text-[17px] leading-relaxed text-muted-foreground font-light">
                 {isAr 
                   ? "قم بتحسين إدارة المخزون وتقليل هدر الأدوية من خلال التبادل المباشر مع شبكة من الصيدليات المعتمدة. اكتشف النواقص، وراقب تواريخ الصلاحية، وتبادل الفوائض بأمان تام."
                   : "Optimize your inventory and drastically reduce medicine waste through direct exchange within a verified network. Discover shortages, track expiry dates, and move surplus stock safely."}
@@ -116,17 +116,17 @@ export default function HomePage() {
       </section>
 
       {/* Split Section 2: Suppliers */}
-      <section className="py-24 lg:py-32 bg-black">
+      <section className="py-24 lg:py-32 bg-white">
         <div className="mx-auto w-full max-w-[1800px] px-[3vw] lg:px-[3.5vw] grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-[4vw] items-center">
           {/* Text Half: Left */}
           <div className="lg:col-span-7 flex flex-col justify-center max-w-2xl order-2 lg:order-1 lg:pr-[2vw]">
             <MaskUpReveal>
-              <h2 className={cn("text-4xl md:text-5xl lg:text-6xl tracking-tight leading-[1.1] text-white", headingFontClass)}>
+              <h2 className={cn("text-4xl md:text-5xl lg:text-6xl tracking-tight leading-[1.1] text-brand-900", headingFontClass)}>
                 {isAr ? "ربط مباشر مع الموردين." : "Direct supplier marketplace."}
               </h2>
             </MaskUpReveal>
             <DirectionalReveal direction="up" distance={15} delay={0.2}>
-              <p className="mt-8 text-[17px] leading-relaxed text-[#C7C7C7] font-light">
+              <p className="mt-8 text-[17px] leading-relaxed text-muted-foreground font-light">
                 {isAr 
                   ? "نظم عمليات الشراء وتتبع الطلبات الخاصة بك في مكان واحد. تواصل مباشرة مع الموردين المعتمدين، واحصل على العروض الحصرية، واضمن استمرارية الإمدادات بدون انقطاع."
                   : "Streamline your procurement process and track orders in a single unified dashboard. Connect with verified suppliers, secure exclusive offers, and ensure a continuous supply chain."}
@@ -155,10 +155,10 @@ export default function HomePage() {
       </section>
 
       {/* 6-Card Features Section */}
-      <section id="features" className="py-32 bg-black">
+      <section id="features" className="py-32 bg-white">
         <div className="mx-auto w-full max-w-[1800px] px-[3vw] lg:px-[3.5vw]">
           <MaskUpReveal className="mx-auto max-w-3xl text-center">
-            <h2 className={cn("text-4xl md:text-5xl lg:text-6xl tracking-tight leading-[1.1] text-white", headingFontClass)}>
+            <h2 className={cn("text-4xl md:text-5xl lg:text-6xl tracking-tight leading-[1.1] text-brand-900", headingFontClass)}>
               {isAr ? "كل ما تحتاجه صيدليتك." : "Everything your pharmacy needs."}
             </h2>
           </MaskUpReveal>
@@ -203,18 +203,13 @@ export default function HomePage() {
               }
             ].map((f) => (
               <StaggerItem key={f.title} className="h-full">
-                <div className="group relative flex h-[300px] flex-col justify-between bg-black p-8 lg:p-10 transition-colors duration-500 hover:bg-[#030303]">
-                  {/* Ultra-thin scale-based 3 borders (#454545) */}
-                  <div className="absolute top-0 left-0 w-full h-[1px] bg-[#454545] origin-top scale-y-[0.6] transition-transform duration-500 group-hover:scale-y-[1]" />
-                  <div className="absolute bottom-0 left-0 w-full h-[1px] bg-[#454545] origin-bottom scale-y-[0.6] transition-transform duration-500 group-hover:scale-y-[1]" />
-                  <div className="absolute top-0 right-0 h-full w-[1px] bg-[#454545] origin-right scale-x-[0.6] rtl:right-auto rtl:left-0 rtl:origin-left transition-transform duration-500 group-hover:scale-x-[1]" />
-
+                <div className="group relative flex h-[300px] flex-col justify-between bg-brand-50 p-8 lg:p-10 transition-colors duration-500 hover:bg-white border border-border">
                   {/* Permanent silver accent line */}
-                  <div className="absolute left-0 top-0 h-full w-1 bg-[#444] rtl:left-auto rtl:right-0 transition-colors duration-300 group-hover:bg-[#666]" />
+                  <div className="absolute left-0 top-0 h-full w-1 bg-brand-300 rtl:left-auto rtl:right-0 transition-colors duration-300 group-hover:bg-brand-500" />
                   
                   <div className="transition-transform duration-500 ease-out group-hover:-translate-y-1">
-                    <h3 className={cn("text-[21px] lg:text-[24px] tracking-tight text-white", headingFontClass)}>{f.title}</h3>
-                    <p className="mt-5 text-[15px] leading-relaxed text-[#C7C7C7] font-light">{f.desc}</p>
+                    <h3 className={cn("text-[21px] lg:text-[24px] tracking-tight text-brand-900", headingFontClass)}>{f.title}</h3>
+                    <p className="mt-5 text-[15px] leading-relaxed text-muted-foreground font-light">{f.desc}</p>
                   </div>
                   <div className={cn("flex items-center text-[11px] font-bold uppercase text-brand-500 transition-colors group-hover:text-brand-400 mt-6", isAr ? "" : "tracking-[0.15em]")}>
                     <span className="cursor-pointer">{isAr ? "اكتشف المزيد" : "Learn More"}</span>
@@ -228,15 +223,15 @@ export default function HomePage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-24 lg:py-32 bg-black">
+      <section className="py-24 lg:py-32 bg-white">
         <div className="mx-auto w-full max-w-[1800px] px-[3vw] lg:px-[3.5vw]">
           <DirectionalReveal direction="up" distance={20}>
-            <p className="text-[13px] font-bold uppercase tracking-[0.15em] text-[#C7C7C7]">
+            <p className="text-[13px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
               {t.stats.eyebrow}
             </p>
           </DirectionalReveal>
           <MaskUpReveal className="mt-6 max-w-3xl">
-            <h2 className={cn("text-4xl md:text-5xl lg:text-6xl tracking-tight leading-[1.1] text-white", headingFontClass)}>
+            <h2 className={cn("text-4xl md:text-5xl lg:text-6xl tracking-tight leading-[1.1] text-brand-900", headingFontClass)}>
               {t.stats.title}
             </h2>
           </MaskUpReveal>
@@ -244,11 +239,11 @@ export default function HomePage() {
           <StaggerContainer className="mt-20 grid grid-cols-2 gap-x-8 gap-y-16 md:grid-cols-4 pt-10">
             {t.stats.items.map((s) => (
               <StaggerItem key={s.label}>
-                <div className={cn("text-5xl md:text-6xl tracking-tighter text-white", headingFontClass)}>
+                <div className={cn("text-5xl md:text-6xl tracking-tighter text-brand-900", headingFontClass)}>
                   <AnimatedNumber value={s.value} />
                   <span dir="ltr" className="inline-block text-brand-500 ml-1">{s.suffix === 'M$' ? '$M' : s.suffix}</span>
                 </div>
-                <p className="mt-6 text-[12px] font-bold uppercase tracking-widest text-[#C7C7C7]">{s.label}</p>
+                <p className="mt-6 text-[12px] font-bold uppercase tracking-widest text-muted-foreground">{s.label}</p>
               </StaggerItem>
             ))}
           </StaggerContainer>
@@ -256,15 +251,15 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-40 bg-black">
+      <section className="py-40 bg-white">
         <div className="mx-auto max-w-4xl px-6 text-center">
           <MaskUpReveal>
-            <h2 className={cn("text-5xl md:text-6xl lg:text-7xl tracking-tight leading-[1.1] text-white", headingFontClass)}>
+            <h2 className={cn("text-5xl md:text-6xl lg:text-7xl tracking-tight leading-[1.1] text-brand-900", headingFontClass)}>
               {isAr ? "جاهز للانضمام؟" : "Ready to join?"}
             </h2>
           </MaskUpReveal>
           <DirectionalReveal direction="up" distance={20} delay={0.2}>
-            <p className="mx-auto mt-8 max-w-2xl text-[18px] text-[#C7C7C7] font-light leading-relaxed">
+            <p className="mx-auto mt-8 max-w-2xl text-[18px] text-muted-foreground font-light leading-relaxed">
               {isAr 
                 ? "ارتقِ بمستوى صيدليتك. تواصل، وتبادل، واطلب الأدوية بثقة تامة."
                 : "Elevate your pharmacy operations. Connect, exchange, and procure medicine with absolute confidence."}
@@ -282,7 +277,7 @@ export default function HomePage() {
       </section>
 
       {/* Footer wrapper */}
-      <div className="bg-black text-[#C7C7C7]">
+      <div className="bg-white text-muted-foreground">
         <PublicFooter />
       </div>
     </div>

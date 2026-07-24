@@ -41,7 +41,7 @@ export function StatCard({
             )}
           </p>
         </div>
-        <div className="flex size-9 items-center justify-center rounded-[var(--radius-md)] bg-[#111] border border-[#2e2e2e] text-brand-500">
+        <div className="flex size-9 items-center justify-center rounded-[var(--radius-md)] bg-brand-50 border border-brand-200 text-brand-600">
           <Icon className="size-4.5" />
         </div>
       </div>

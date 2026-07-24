@@ -33,7 +33,7 @@ export function AuthLayout({
             <span className="text-[15px] font-semibold tracking-tight">PharmaSY</span>
           </Link>
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex h-8 cursor-pointer items-center gap-1.5 rounded-[var(--radius-sm)] px-2 text-[13px] font-medium text-foreground/70 transition-colors duration-200 hover:bg-white/[0.05] focus:outline-none">
+            <DropdownMenuTrigger className="flex h-8 cursor-pointer items-center gap-1.5 rounded-[var(--radius-sm)] px-2 text-[13px] font-medium text-foreground/70 transition-colors duration-200 hover:bg-brand-50 focus:outline-none">
               <Globe className="size-3.5" />
               {locale === "ar" ? "AR" : "EN"}
               <ChevronDown className="size-3.5 text-muted-foreground" />
@@ -51,11 +51,11 @@ export function AuthLayout({
         </div>
       </div>
 
-      <div className="relative hidden overflow-hidden bg-[#030303] lg:flex lg:flex-col lg:justify-center lg:px-16 border-s border-border">
+      <div className="relative hidden overflow-hidden bg-brand-900 lg:flex lg:flex-col lg:justify-center lg:px-16 border-s border-border">
         <div
           className="absolute inset-0"
           style={{
-            background: "radial-gradient(800px circle at 0% 50%, hsl(355 74% 52% / 0.1), transparent)",
+            background: "radial-gradient(800px circle at 0% 50%, var(--brand-800), transparent)",
           }}
         />
         <div className="relative">
@@ -75,7 +75,7 @@ export function AuthLayout({
                 <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-white/10 text-brand-200">
                   <f.icon className="size-4" />
                 </div>
-                <p className="text-[13.5px] leading-relaxed text-white/75">{f.text}</p>
+                <p className="text-[13.5px] leading-relaxed text-brand-50/80">{f.text}</p>
               </div>
             ))}
           </div>
