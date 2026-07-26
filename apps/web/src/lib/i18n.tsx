@@ -93,6 +93,12 @@ const dictionaries: Record<Locale, Dict> = {
     "verify.sent": "If verification is required, a new code has been sent.",
     "verify.success": "Email verified successfully.",
 
+    "onboarding.loading.register": "Creating your account...",
+    "onboarding.loading.verify": "Verifying your email address...",
+    "onboarding.loading.submitOrg": "Submitting your organization profile for review...",
+    "onboarding.toast.verified": "Email verified. Complete your organization profile for Admin review.",
+    "onboarding.toast.orgSubmitted": "Your email is verified, and your organization is awaiting Admin approval.",
+
     "auth.state.emailNotVerified": "Your email is not verified yet.",
     "auth.state.organizationProfileRequired": "Your email is verified. Complete your organization profile for Admin review.",
     "auth.state.completeOrganization": "Complete it now",
@@ -215,6 +221,12 @@ const dictionaries: Record<Locale, Dict> = {
     "verify.back": "العودة إلى تسجيل الدخول",
     "verify.sent": "إذا كان الحساب يحتاج إلى التحقق، فقد أُرسل رمز جديد.",
     "verify.success": "تم تأكيد البريد الإلكتروني بنجاح.",
+
+    "onboarding.loading.register": "جارٍ إنشاء حسابك...",
+    "onboarding.loading.verify": "جارٍ التحقق من بريدك الإلكتروني...",
+    "onboarding.loading.submitOrg": "جارٍ إرسال بيانات منظمتك للمراجعة...",
+    "onboarding.toast.verified": "تم تأكيد بريدك الإلكتروني. أكمل بيانات منظمتك ليقوم المدير بمراجعتها.",
+    "onboarding.toast.orgSubmitted": "تم تأكيد بريدك الإلكتروني، ومنظمتك الآن بانتظار موافقة المدير.",
 
     "auth.state.emailNotVerified": "لم يتم تأكيد بريدك الإلكتروني بعد.",
     "auth.state.organizationProfileRequired": "تم تأكيد بريدك. أكمل بيانات منظمتك ليقوم المدير بمراجعتها.",

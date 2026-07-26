@@ -48,16 +48,51 @@ export class PharmaciesService {
       where: { userId },
     });
     if (existing) {
-      throw new ConflictException(
-        'Pharmacy profile already exists for this user',
-      );
+      if (existing.status !== OrgStatus.REJECTED) {
+        throw new ConflictException(
+          'Pharmacy profile already exists for this user',
+        );
+      }
     }
 
     const licenseExists = await this.prisma.pharmacy.findUnique({
       where: { licenseNumber: data.licenseNumber },
     });
-    if (licenseExists) {
+    if (licenseExists && (!existing || licenseExists.id !== existing.id)) {
       throw new ConflictException('License number already registered');
+    }
+
+    if (existing && existing.status === OrgStatus.REJECTED) {
+      const [updated] = await this.prisma.$transaction([
+        this.prisma.pharmacy.update({
+          where: { id: existing.id },
+          data: {
+            name: data.name,
+            licenseNumber: data.licenseNumber,
+            address: data.address,
+            city: data.city,
+            phone: data.phone,
+            logoUrl: data.logoUrl,
+            status: OrgStatus.PENDING,
+            rejectionNote: null,
+          },
+        }),
+        this.prisma.user.update({
+          where: { id: userId },
+          data: { status: UserStatus.PENDING },
+        }),
+      ]);
+      await this.audit.log({
+        entityType: 'Pharmacy',
+        entityId: updated.id,
+        action: 'RESUBMIT_PROFILE',
+        prevValues: { status: 'REJECTED' },
+        newValues: { status: 'PENDING', name: data.name },
+        userId,
+        orgId: updated.id,
+        userRole: 'PHARMACY',
+      });
+      return updated;
     }
 
     const [pharmacy] = await this.prisma.$transaction([

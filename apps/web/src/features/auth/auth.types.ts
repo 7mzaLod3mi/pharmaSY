@@ -54,3 +54,12 @@ export interface LoginResponse {
 export interface MessageResponse {
   message: string;
 }
+
+export interface VerifyEmailResponse {
+  message: string;
+  alreadyVerified?: boolean;
+  accessToken?: string;
+  expiresIn?: number;
+  user?: AuthUser;
+}
+

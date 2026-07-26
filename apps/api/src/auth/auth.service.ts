@@ -101,20 +101,56 @@ export class AuthService {
     return {
       message: 'Registration successful. Please verify your email.',
       userId: user.id,
+      email: user.email,
+      role: user.role,
+      accountState: AccountVerificationState.EMAIL_NOT_VERIFIED,
     };
   }
 
   async verifyEmail(dto: VerifyEmailDto) {
+    const cleanEmail = dto.email.trim().toLowerCase();
+    const user = await this.prisma.user.findUnique({
+      where: { email: cleanEmail },
+      include: {
+        pharmacy: {
+          select: { id: true, status: true, name: true, rejectionNote: true },
+        },
+        supplier: {
+          select: { id: true, status: true, name: true, rejectionNote: true },
+        },
+      },
+    });
+
+    if (user && user.emailVerifiedAt && !user.deletedAt) {
+      const role = user.role as UserRole;
+      const status = user.status as UserStatus;
+      const organization =
+        role === UserRole.PHARMACY ? user.pharmacy : user.supplier;
+      const accountState = resolveAccountVerificationState({
+        role,
+        status,
+        emailVerifiedAt: user.emailVerifiedAt,
+        organization: organization
+          ? { status: organization.status as OrgStatus }
+          : null,
+      });
+      return {
+        message: 'Email is already verified',
+        alreadyVerified: true,
+        accountState,
+      };
+    }
+
     const verification = await this.prisma.emailVerification.findFirst({
       where: {
-        email: dto.email,
+        email: cleanEmail,
         usedAt: null,
         expiresAt: { gt: new Date() },
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    if (!verification || !(await bcrypt.compare(dto.otp, verification.otp))) {
+    if (!verification || !user || !(await bcrypt.compare(dto.otp, verification.otp))) {
       throw new BadRequestException('Invalid or expired verification code');
     }
 
@@ -124,23 +160,112 @@ export class AuthService {
         data: { usedAt: new Date() },
       }),
       this.prisma.user.update({
-        where: { id: verification.userId },
+        where: { id: user.id },
         data: { emailVerifiedAt: new Date() },
       }),
     ]);
 
-    return { message: 'Email verified successfully' };
+    const verifiedAt = new Date();
+    const role = user.role as UserRole;
+    const status = user.status as UserStatus;
+    const organization =
+      role === UserRole.PHARMACY ? user.pharmacy : user.supplier;
+    const accountState = resolveAccountVerificationState({
+      role,
+      status,
+      emailVerifiedAt: verifiedAt,
+      organization: organization
+        ? { status: organization.status as OrgStatus }
+        : null,
+    });
+
+    const orgId = organization?.id;
+    const orgStatus = organization?.status as OrgStatus | undefined;
+    const tokens = await this.generateTokens({
+      sub: user.id,
+      email: user.email,
+      role,
+      status,
+      orgId,
+      orgStatus,
+    });
+
+    const refreshTokenHash = await bcrypt.hash(tokens.refreshToken, 12);
+    await this.prisma.$transaction([
+      this.prisma.refreshToken.updateMany({
+        where: { userId: user.id, isRevoked: false },
+        data: { isRevoked: true },
+      }),
+      this.prisma.refreshToken.create({
+        data: {
+          userId: user.id,
+          token: refreshTokenHash,
+          expiresAt: this.getRefreshTokenExpiry(),
+        },
+      }),
+    ]);
+
+    return {
+      message: 'Email verified successfully',
+      alreadyVerified: false,
+      accessToken: tokens.accessToken,
+      expiresIn: this.getAccessTokenExpirySeconds(),
+      refreshToken: tokens.refreshToken,
+      accountState,
+      user: {
+        id: user.id,
+        email: user.email,
+        phone: user.phone,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        avatar: user.avatar,
+        emailVerifiedAt: verifiedAt,
+        status,
+        role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        orgId,
+        orgName: organization?.name,
+        orgStatus,
+        accountState,
+        organizationRejectionReason: organization?.rejectionNote ?? undefined,
+        requiresOrganizationApproval:
+          role !== UserRole.ADMIN &&
+          accountState !== AccountVerificationState.ACTIVE,
+      },
+    };
   }
 
   async resendVerification(dto: ResendOtpDto) {
+    const email = dto.email.trim().toLowerCase();
     const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+      where: { email },
     });
     if (!user || user.deletedAt || user.emailVerifiedAt) {
       return {
         message: 'If verification is required, a new code has been sent.',
       };
     }
+
+    const recent = await this.prisma.emailVerification.findFirst({
+      where: {
+        userId: user.id,
+        usedAt: null,
+        createdAt: { gt: new Date(Date.now() - 60 * 1000) },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (recent) {
+      const remaining = Math.ceil(
+        (recent.createdAt.getTime() + 60000 - Date.now()) / 1000,
+      );
+      throw new BadRequestException({
+        code: 'COOLDOWN_ACTIVE',
+        message: `Please wait ${remaining} seconds before requesting a new code.`,
+        cooldown: remaining,
+      });
+    }
+
     this.assertEmailDeliveryConfigured();
 
     const otp = this.createOtp();

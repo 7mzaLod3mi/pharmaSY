@@ -48,16 +48,51 @@ export class SuppliersService {
       where: { userId },
     });
     if (existing) {
-      throw new ConflictException(
-        'Supplier profile already exists for this user',
-      );
+      if (existing.status !== OrgStatus.REJECTED) {
+        throw new ConflictException(
+          'Supplier profile already exists for this user',
+        );
+      }
     }
 
     const registerExists = await this.prisma.supplier.findUnique({
       where: { tradeRegister: data.tradeRegister },
     });
-    if (registerExists) {
+    if (registerExists && (!existing || registerExists.id !== existing.id)) {
       throw new ConflictException('Trade register number already in use');
+    }
+
+    if (existing && existing.status === OrgStatus.REJECTED) {
+      const [updated] = await this.prisma.$transaction([
+        this.prisma.supplier.update({
+          where: { id: existing.id },
+          data: {
+            name: data.name,
+            tradeRegister: data.tradeRegister,
+            address: data.address,
+            city: data.city,
+            phone: data.phone,
+            logoUrl: data.logoUrl,
+            status: OrgStatus.PENDING,
+            rejectionNote: null,
+          },
+        }),
+        this.prisma.user.update({
+          where: { id: userId },
+          data: { status: UserStatus.PENDING },
+        }),
+      ]);
+      await this.audit.log({
+        entityType: 'Supplier',
+        entityId: updated.id,
+        action: 'RESUBMIT_PROFILE',
+        prevValues: { status: 'REJECTED' },
+        newValues: { status: 'PENDING', name: data.name },
+        userId,
+        orgId: updated.id,
+        userRole: 'SUPPLIER',
+      });
+      return updated;
     }
 
     const [supplier] = await this.prisma.$transaction([

@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
+import { apiRequest } from "@/lib/api-client";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -40,13 +40,20 @@ export default function GlobalMovementsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['inventory-movements', 'global', page],
     queryFn: async () => {
-      const res = await apiClient.get<MovementPage>('/inventory/movements', { params: { page, limit: 20 } });
-      return res.data;
+      return apiRequest<MovementPage>({
+        method: "GET",
+        url: "/inventory/movements",
+        params: { page, limit: 20 },
+      });
     }
   });
 
-  const movements = data?.data || [];
-  const meta = data?.meta;
+  const movements = Array.isArray(data?.data)
+    ? data.data
+    : Array.isArray(data)
+      ? (data as unknown as GlobalInventoryMovement[])
+      : [];
+  const meta = data && "meta" in data ? (data as MovementPage).meta : undefined;
 
   const getMovementColor = (type: string) => {
     switch(type) {

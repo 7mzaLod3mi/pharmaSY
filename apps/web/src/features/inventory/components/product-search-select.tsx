@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Check, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
+import { apiRequest } from "@/lib/api-client";
 
 interface CatalogProduct {
   id: string;
@@ -34,13 +34,20 @@ export function ProductSearchSelect({ value, onChange, placeholder = "Search mas
     queryKey: ['products', 'search', debouncedSearch],
     queryFn: async () => {
       if (!debouncedSearch) return { data: [] };
-      const res = await apiClient.get<CatalogProductsResponse>('/products', { params: { search: debouncedSearch, limit: 10 } });
-      return res.data;
+      return apiRequest<CatalogProductsResponse>({
+        method: "GET",
+        url: "/products",
+        params: { search: debouncedSearch, limit: 10 },
+      });
     },
     enabled: true,
   });
 
-  const products = data?.data || [];
+  const products = Array.isArray(data?.data)
+    ? data.data
+    : Array.isArray(data)
+      ? (data as unknown as CatalogProduct[])
+      : [];
   const selectedProduct = products.find((product) => product.id === value) || (value ? { id: value, tradeNameEn: 'Selected Product', tradeNameAr: '' } : null);
 
   return (

@@ -5,6 +5,7 @@ import type {
   LoginResponse,
   MessageResponse,
   RegisterInput,
+  VerifyEmailResponse,
 } from "./auth.types";
 
 export const authRepository = {
@@ -15,7 +16,7 @@ export const authRepository = {
     return apiRequest<MessageResponse>({ method: "POST", url: "/auth/register", data: input });
   },
   verifyEmail(email: string, otp: string) {
-    return apiRequest<MessageResponse>({
+    return apiRequest<VerifyEmailResponse>({
       method: "POST",
       url: "/auth/verify-email",
       data: { email, otp },

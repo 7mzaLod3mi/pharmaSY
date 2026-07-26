@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Sidebar, type NavSection } from "./sidebar";
 import { Topbar } from "./topbar";
 import { MobileSidebarDrawer } from "./mobile-sidebar-drawer";
-import { useAuth } from "@/features/auth/auth-provider";
+import { useAuth, getOnboardingRedirectPath } from "@/features/auth/auth-provider";
 import { useLocale } from "@/lib/i18n";
 
 export function DashboardShell({
@@ -29,11 +29,31 @@ export function DashboardShell({
     rolePrefix === "admin" ? "ADMIN" : rolePrefix === "supplier" ? "SUPPLIER" : "PHARMACY";
 
   useEffect(() => {
-    if (state === "anonymous") router.replace("/login");
-  }, [router, state]);
+    if (state === "anonymous") {
+      router.replace("/login");
+      return;
+    }
+    if (state === "authenticated" && user) {
+      if (
+        user.status === "BANNED" ||
+        user.accountState === "ACCOUNT_BANNED" ||
+        user.status === "SUSPENDED" ||
+        user.accountState === "ACCOUNT_SUSPENDED"
+      ) {
+        return;
+      }
+      if (user.role !== expectedRole && expectedRole) {
+        return;
+      }
+      const targetPath = getOnboardingRedirectPath(user);
+      if (!targetPath.startsWith(`/${rolePrefix}`)) {
+        router.replace(targetPath);
+      }
+    }
+  }, [router, state, user, rolePrefix, expectedRole]);
 
   if (state === "loading" || state === "anonymous") {
-    return <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">Loading workspace…</div>;
+    return <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground animate-pulse">Loading workspace…</div>;
   }
 
   if (!user || user.role !== expectedRole) {
@@ -48,33 +68,11 @@ export function DashboardShell({
     return <div className="flex min-h-screen items-center justify-center bg-background p-6 text-center text-sm text-danger-500">{t("auth.state.accountSuspended")}</div>;
   }
 
-  const organizationStatus = user.orgStatus ?? user.pharmacy?.status ?? user.supplier?.status;
-  if (user.role !== "ADMIN" && !user.orgId && !user.pharmacy && !user.supplier) {
-    return <div className="flex min-h-screen items-center justify-center bg-background p-6 text-center text-sm text-muted-foreground">{t("auth.state.organizationProfileRequired")} <button className="ms-1 text-brand-600 underline" onClick={() => router.replace("/onboarding")}>{t("auth.state.completeOrganization")}</button></div>;
+  const targetPath = getOnboardingRedirectPath(user);
+  if (!targetPath.startsWith(`/${rolePrefix}`)) {
+    return <div className="flex min-h-screen items-center justify-center bg-background p-6 text-center text-sm text-muted-foreground animate-pulse">{t("auth.state.organizationPending")}...</div>;
   }
 
-  if (
-    user.role !== "ADMIN" &&
-    (organizationStatus === "REJECTED" ||
-      user.accountState === "ORGANIZATION_REJECTED")
-  ) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-6 text-center text-sm text-danger-500">
-        <div className="space-y-2">
-          <p>{t("auth.state.organizationRejected")}</p>
-          {user.organizationRejectionReason ? (
-            <p>
-              {t("auth.state.rejectionReason")}: {user.organizationRejectionReason}
-            </p>
-          ) : null}
-        </div>
-      </div>
-    );
-  }
-
-  if (user.role !== "ADMIN" && organizationStatus !== "APPROVED") {
-    return <div className="flex min-h-screen items-center justify-center bg-background p-6 text-center text-sm text-muted-foreground">{t("auth.state.organizationPending")}</div>;
-  }
 
   const authenticatedName = `${user.firstName} ${user.lastName}`.trim() || userName;
 

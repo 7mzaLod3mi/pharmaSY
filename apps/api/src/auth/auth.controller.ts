@@ -57,10 +57,24 @@ export class AuthController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Email verification stage completed',
+    description: 'Email verification stage completed and session granted',
   })
-  verifyEmail(@Body() dto: VerifyEmailDto) {
-    return this.authService.verifyEmail(dto);
+  async verifyEmail(
+    @Body() dto: VerifyEmailDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const data = await this.authService.verifyEmail(dto);
+    if (data.refreshToken) {
+      this.setRefreshCookie(res, data.refreshToken);
+    }
+    return {
+      message: data.message,
+      alreadyVerified: data.alreadyVerified,
+      accessToken: data.accessToken,
+      expiresIn: data.expiresIn,
+      user: data.user,
+      accountState: data.accountState,
+    };
   }
 
   @Public()

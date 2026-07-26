@@ -8,7 +8,7 @@ import { AuthLayout } from "@/components/layout/auth-layout";
 import { Input, Label } from "@/components/ui/input";
 import { EditorialButton } from "@/components/ui/editorial-button";
 import { useLocale } from "@/lib/i18n";
-import { dashboardPathForRole, useAuth } from "@/features/auth/auth-provider";
+import { getOnboardingRedirectPath, useAuth } from "@/features/auth/auth-provider";
 import type { ApiError } from "@/lib/http-client";
 import { localizedAuthError } from "@/features/auth/auth-errors";
 
@@ -38,7 +38,6 @@ export default function LoginPage() {
     setError(null);
     try {
       const user = await login({ email, password });
-      const hasOrganization = user.role === "ADMIN" || user.orgId || user.pharmacy || user.supplier;
       if (user.accountState === "ORGANIZATION_PROFILE_REQUIRED") {
         toast.info(t("auth.state.organizationProfileRequired"));
       } else if (user.accountState === "ORGANIZATION_PENDING") {
@@ -54,7 +53,7 @@ export default function LoginPage() {
       } else {
         toast.success(t("login.active"));
       }
-      router.replace(hasOrganization ? dashboardPathForRole(user.role) : "/onboarding");
+      router.replace(getOnboardingRedirectPath(user));
     } catch (unknownError) {
       const localized = localizedAuthError(unknownError, t);
       setError({ detail: localized.error, message: localized.message });
