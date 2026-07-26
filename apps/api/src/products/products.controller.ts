@@ -1,12 +1,22 @@
 import {
-  Controller, Get, Post, Patch, Delete,
-  Param, Body, Query, HttpCode, HttpStatus,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  Query,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import {
-  IsString, IsOptional, IsBoolean, IsNumber, MinLength, Min,
-} from 'class-validator';
-import { Type } from 'class-transformer';
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
+import { IsString, IsOptional, MinLength } from 'class-validator';
 import { ProductsService } from './products.service';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Public } from '../common/decorators/public.decorator';
@@ -15,78 +25,103 @@ import { UserRole, ProductStatus } from '@pharmasyn/types';
 import type { JwtPayload } from '@pharmasyn/types';
 
 export class CreateProductDto {
-  @IsString() @MinLength(2)
+  @IsString()
+  @MinLength(2)
   tradeNameAr: string;
 
-  @IsString() @MinLength(2)
+  @IsString()
+  @MinLength(2)
   tradeNameEn: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   scientificName?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   dosageForm?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   strength?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   packageSize?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   barcode?: string;
 
   @IsString()
   categoryId: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   manufacturerId?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   imageUrl?: string;
 
-  @IsString() @MinLength(1)
+  @IsString()
+  @MinLength(1)
   unit: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   description?: string;
 }
 
 export class UpdateProductDto {
-  @IsOptional() @IsString() @MinLength(2)
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
   tradeNameAr?: string;
 
-  @IsOptional() @IsString() @MinLength(2)
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
   tradeNameEn?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   scientificName?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   dosageForm?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   strength?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   packageSize?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   barcode?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   categoryId?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   manufacturerId?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   imageUrl?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   unit?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   description?: string;
 
   @IsOptional()
@@ -114,13 +149,16 @@ export class ProductsController {
     @Query('limit') limit?: string,
     @CurrentUser() user?: JwtPayload,
   ) {
-    return this.productsService.findAll({
-      search,
-      categoryId,
-      manufacturerId,
-      page: page ? +page : 1,
-      limit: limit ? +limit : 20,
-    }, user?.role);
+    return this.productsService.findAll(
+      {
+        search,
+        categoryId,
+        manufacturerId,
+        page: page ? +page : 1,
+        limit: limit ? +limit : 20,
+      },
+      user?.role,
+    );
   }
 
   @Public()
@@ -150,7 +188,11 @@ export class ProductsController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update product (admin only)' })
-  update(@Param('id') id: string, @Body() dto: UpdateProductDto, @CurrentUser() user: JwtPayload) {
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateProductDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
     return this.productsService.update(id, dto, user.sub);
   }
 

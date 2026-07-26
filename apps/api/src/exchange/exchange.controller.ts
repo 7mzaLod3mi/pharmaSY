@@ -1,4 +1,4 @@
-import { Controller, Post, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Delete, Param, Body } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { ExchangeService } from './exchange.service';
 import { CreateMarketplaceOfferDto } from './dto/create-offer.dto';
@@ -29,10 +29,7 @@ export class ExchangeController {
   @Delete('offers/:id')
   @Roles(UserRole.PHARMACY)
   @ApiOperation({ summary: 'Cancel a marketplace offer' })
-  async cancelOffer(
-    @CurrentUser() user: JwtPayload,
-    @Param('id') id: string,
-  ) {
+  async cancelOffer(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
     return this.exchangeService.cancelOffer(user.orgId!, id, user.sub);
   }
 }

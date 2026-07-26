@@ -1,10 +1,13 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { OrgStatus, UserRole, UserStatus } from '@pharmasyn/types';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
-import {
-  ALLOW_PENDING_ORGANIZATION_KEY,
-} from '../decorators/allow-pending-organization.decorator';
+import { ALLOW_PENDING_ORGANIZATION_KEY } from '../decorators/allow-pending-organization.decorator';
 
 interface AuthenticatedRequestUser {
   role: UserRole;
@@ -24,8 +27,10 @@ export class OrganizationStatusGuard implements CanActivate {
     ]);
     if (isPublic) return true;
 
-    const request = context.switchToHttp().getRequest();
-    const user = request.user as AuthenticatedRequestUser | undefined;
+    const request = context
+      .switchToHttp()
+      .getRequest<{ user?: AuthenticatedRequestUser }>();
+    const user = request.user;
     if (!user) return true;
 
     const allowPending = this.reflector.getAllAndOverride<boolean>(

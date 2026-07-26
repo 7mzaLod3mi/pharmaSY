@@ -41,7 +41,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           code = code ?? 'VALIDATION_ERROR';
         }
       } else {
-        message = exceptionResponse as string;
+        message = exceptionResponse;
       }
     }
 

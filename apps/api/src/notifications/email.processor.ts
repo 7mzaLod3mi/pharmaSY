@@ -19,8 +19,10 @@ export class EmailProcessor extends WorkerHost {
   }
 
   async process(job: Job<EmailJobData>): Promise<void> {
-    this.logger.debug(`Processing email job ${job.id} for ${job.data.to} (Attempt ${job.attemptsMade + 1})`);
-    
+    this.logger.debug(
+      `Processing email job ${job.id} for ${job.data.to} (Attempt ${job.attemptsMade + 1})`,
+    );
+
     try {
       await this.emailService.sendNotificationEmail(
         job.data.to,
@@ -29,7 +31,10 @@ export class EmailProcessor extends WorkerHost {
       );
       this.logger.log(`Email job ${job.id} completed successfully.`);
     } catch (error) {
-      this.logger.error(`Failed to process email job ${job.id}: ${(error as Error).message}`, (error as Error).stack);
+      this.logger.error(
+        `Failed to process email job ${job.id}: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw error; // Let BullMQ handle the retry mechanism
     }
   }

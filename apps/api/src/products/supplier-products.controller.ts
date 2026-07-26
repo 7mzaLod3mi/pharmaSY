@@ -1,11 +1,31 @@
 import {
-  Controller, Get, Post, Patch, Delete,
-  Param, Body, Query, HttpCode, HttpStatus,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  Query,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import {
-  IsArray, IsBoolean, IsDateString, IsInt, IsNumber, IsOptional, IsString,
-  Min, ValidateNested,
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
+import {
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { SupplierProductsService } from './supplier-products.service';
@@ -17,10 +37,14 @@ import { Permissions } from '../common/permissions';
 import { UserRole } from '@pharmasyn/types';
 
 export class QuantityDiscountTierDto {
-  @IsInt() @Min(1) @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
   minQuantity: number;
 
-  @IsNumber() @Min(0) @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
   unitPrice: number;
 }
 
@@ -28,55 +52,81 @@ export class UpsertSupplierProductDto {
   @IsString()
   productId: string;
 
-  @IsNumber() @Min(0) @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
   price: number;
 
-  @IsNumber() @Min(0) @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
   stock: number;
 
-  @IsOptional() @IsNumber() @Min(1) @Type(() => Number)
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Type(() => Number)
   minOrder?: number;
 
-  @IsOptional() @IsDateString()
-  expiryDate?: string;
+  @IsDateString()
+  expiryDate: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   notes?: string;
 
-  @IsOptional() @IsBoolean()
+  @IsOptional()
+  @IsBoolean()
   isAvailable?: boolean;
 
-  @IsOptional() @IsString()
-  batchNumber?: string;
+  @IsString()
+  batchNumber: string;
 
-  @IsOptional() @IsArray() @ValidateNested({ each: true })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
   @Type(() => QuantityDiscountTierDto)
   quantityDiscounts?: QuantityDiscountTierDto[];
 }
 
 export class UpdateSupplierProductDto {
-  @IsOptional() @IsNumber() @Min(0) @Type(() => Number)
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
   price?: number;
 
-  @IsOptional() @IsNumber() @Min(0) @Type(() => Number)
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
   stock?: number;
 
-  @IsOptional() @IsNumber() @Min(1) @Type(() => Number)
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Type(() => Number)
   minOrder?: number;
 
-  @IsOptional() @IsDateString()
+  @IsOptional()
+  @IsDateString()
   expiryDate?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   notes?: string;
 
-  @IsOptional() @IsBoolean()
+  @IsOptional()
+  @IsBoolean()
   isAvailable?: boolean;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   batchNumber?: string;
 
-  @IsOptional() @IsArray() @ValidateNested({ each: true })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
   @Type(() => QuantityDiscountTierDto)
   quantityDiscounts?: QuantityDiscountTierDto[];
 }
@@ -103,14 +153,22 @@ export class SupplierProductsController {
     return this.supplierProductsService.findBySupplierId(user.orgId!, {
       page: page ? +page : 1,
       limit: limit ? +limit : 20,
-      isAvailable: isAvailable === 'true' ? true : isAvailable === 'false' ? false : undefined,
+      isAvailable:
+        isAvailable === 'true'
+          ? true
+          : isAvailable === 'false'
+            ? false
+            : undefined,
     });
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Add/update product in my catalog (upsert)' })
-  upsert(@CurrentUser() user: JwtPayload, @Body() dto: UpsertSupplierProductDto) {
+  upsert(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: UpsertSupplierProductDto,
+  ) {
     return this.supplierProductsService.upsert(user.orgId!, dto);
   }
 

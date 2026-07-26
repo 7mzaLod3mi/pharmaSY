@@ -1,8 +1,7 @@
 "use client";
 
-import { ChevronDown, Globe, LogOut, Menu, Search, Settings, User } from "lucide-react";
+import { ChevronDown, Globe, LogOut, Menu, Settings, User } from "lucide-react";
 import { NotificationBell } from "@/components/shared/notification-bell";
-import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,10 +39,7 @@ export function Topbar({
         <Menu className="size-4.5" />
       </button>
 
-      <div className="relative w-full max-w-sm">
-        <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input placeholder="Search orders, products, pharmacies…" className="ps-9" />
-      </div>
+      <div className="flex-1" />
 
       <div className="flex items-center gap-2">
         <DropdownMenu>
@@ -73,10 +69,10 @@ export function Topbar({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuLabel>My account</DropdownMenuLabel>
-            <DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => router.push("/profile")}>
               <User className="size-4" /> Profile
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => router.push("/profile")}>
               <Settings className="size-4" /> Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />

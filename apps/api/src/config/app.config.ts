@@ -9,7 +9,8 @@ export const appConfig = registerAs('app', () => ({
 export const jwtConfig = registerAs('jwt', () => ({
   secret: process.env.JWT_SECRET || 'pharmasyn-dev-secret',
   accessExpiry: process.env.JWT_ACCESS_EXPIRY || '15m',
-  refreshSecret: process.env.JWT_REFRESH_SECRET || 'pharmasyn-dev-refresh-secret',
+  refreshSecret:
+    process.env.JWT_REFRESH_SECRET || 'pharmasyn-dev-refresh-secret',
   refreshExpiry: process.env.JWT_REFRESH_EXPIRY || '7d',
 }));
 
@@ -18,7 +19,6 @@ export const r2Config = registerAs('r2', () => ({
   accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
   secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
   bucketName: process.env.R2_BUCKET_NAME || 'pharmasyn-files',
-  publicUrl: process.env.R2_PUBLIC_URL || '',
 }));
 
 export const redisConfig = registerAs('redis', () => ({

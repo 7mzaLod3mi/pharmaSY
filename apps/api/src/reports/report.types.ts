@@ -25,4 +25,3 @@ export interface ReportFile {
   contentType: string;
   extension: 'xlsx' | 'pdf';
 }
-

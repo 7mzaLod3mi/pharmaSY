@@ -47,11 +47,13 @@ export class UsersService {
 
     if (!user) return null;
 
+    const role = user.role as UserRole;
+    const status = user.status as UserStatus;
     const organization =
-      user.role === UserRole.PHARMACY ? user.pharmacy : user.supplier;
+      role === UserRole.PHARMACY ? user.pharmacy : user.supplier;
     const accountState = resolveAccountVerificationState({
-      role: user.role as UserRole,
-      status: user.status as UserStatus,
+      role,
+      status,
       emailVerifiedAt: user.emailVerifiedAt,
       organization: organization
         ? { status: organization.status as OrgStatus }
@@ -66,7 +68,7 @@ export class UsersService {
       accountState,
       organizationRejectionReason: organization?.rejectionNote ?? undefined,
       requiresOrganizationApproval:
-        user.role !== UserRole.ADMIN &&
+        role !== UserRole.ADMIN &&
         accountState !== AccountVerificationState.ACTIVE,
     };
   }

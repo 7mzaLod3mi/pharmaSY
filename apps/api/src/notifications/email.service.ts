@@ -11,8 +11,14 @@ export class EmailService {
 
   constructor(private configService: ConfigService) {
     const apiKey = this.configService.get<string>('RESEND_API_KEY', '');
-    this.fromEmail = this.configService.get<string>('RESEND_FROM_EMAIL', 'noreply@pharmasyn.com');
-    this.fromName = this.configService.get<string>('RESEND_FROM_NAME', 'PharmaSY');
+    this.fromEmail = this.configService.get<string>(
+      'RESEND_FROM_EMAIL',
+      'noreply@pharmasyn.com',
+    );
+    this.fromName = this.configService.get<string>(
+      'RESEND_FROM_NAME',
+      'PharmaSY',
+    );
     if (apiKey) {
       this.resend = new Resend(apiKey);
     } else if (this.configService.get<string>('NODE_ENV') !== 'test') {
@@ -29,7 +35,9 @@ export class EmailService {
   ): Promise<void> {
     if (!this.resend) {
       if (this.configService.get<string>('NODE_ENV') === 'test') return;
-      throw new Error('Email delivery is not configured: RESEND_API_KEY is missing');
+      throw new Error(
+        'Email delivery is not configured: RESEND_API_KEY is missing',
+      );
     }
 
     try {

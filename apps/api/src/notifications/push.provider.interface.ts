@@ -7,5 +7,7 @@ export interface PushNotificationPayload {
 
 export interface PushProvider {
   sendPushNotification(payload: PushNotificationPayload): Promise<void>;
-  sendPushNotificationsBatch(payloads: PushNotificationPayload[]): Promise<void>;
+  sendPushNotificationsBatch(
+    payloads: PushNotificationPayload[],
+  ): Promise<void>;
 }

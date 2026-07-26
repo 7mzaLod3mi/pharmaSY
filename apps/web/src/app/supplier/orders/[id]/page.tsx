@@ -35,7 +35,7 @@ const actionLabel: Record<SupplierOrderStatus, string> = {
   pending: "Confirm order",
   confirmed: "Start processing",
   processing: "Mark shipped",
-  shipped: "Mark delivered",
+  shipped: "Awaiting pharmacy receipt",
   delivered: "Delivered",
   cancelled: "Cancelled",
 };
@@ -98,6 +98,34 @@ export default function SupplierOrderDetailsPage({ params }: { params: Promise<{
               >
                 {updateStatus.isPending ? "Updating..." : actionLabel[oStatus]}
               </Button>
+            )}
+            {["pending", "confirmed", "processing"].includes(oStatus) && (
+              <Button
+                variant="danger"
+                onClick={() => {
+                  const label = oStatus === "pending" ? "reject" : "cancel";
+                  if (!window.confirm(`Are you sure you want to ${label} this order?`)) {
+                    return;
+                  }
+                  updateStatus.mutate(
+                    { id: order.id, status: "cancelled" },
+                    {
+                      onSuccess: () =>
+                        toast.success(
+                          oStatus === "pending" ? "Order rejected" : "Order cancelled"
+                        ),
+                      onError: (error) =>
+                        toast.error(normalizeApiError(error).message),
+                    }
+                  );
+                }}
+                disabled={updateStatus.isPending}
+              >
+                {oStatus === "pending" ? "Reject order" : "Cancel order"}
+              </Button>
+            )}
+            {oStatus === "shipped" && (
+              <Badge variant="info">Awaiting pharmacy receipt confirmation</Badge>
             )}
           </>
         }

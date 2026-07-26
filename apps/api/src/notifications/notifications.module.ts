@@ -17,8 +17,8 @@ import {
 
 @Module({
   imports: [
-    PrismaModule, 
-    JwtModule.register({}), 
+    PrismaModule,
+    JwtModule.register({}),
     ConfigModule,
     BullModule.registerQueue({
       name: EMAIL_QUEUE,
@@ -27,12 +27,12 @@ import {
   ],
   controllers: [NotificationsController],
   providers: [
-    NotificationsService, 
-    NotificationsGateway, 
-    EmailService, 
-    EmailProcessor, 
+    NotificationsService,
+    NotificationsGateway,
+    EmailService,
+    EmailProcessor,
     NotificationsListener,
-    NotificationsScheduler
+    NotificationsScheduler,
   ],
   exports: [NotificationsService, NotificationsGateway],
 })

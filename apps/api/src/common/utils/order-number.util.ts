@@ -1,7 +1,8 @@
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
-type SequenceClient = Pick<PrismaService, 'sequence'> | Pick<Prisma.TransactionClient, 'sequence'>;
+type SequenceClient =
+  Pick<PrismaService, 'sequence'> | Pick<Prisma.TransactionClient, 'sequence'>;
 export type DocumentPrefix = 'PSY' | 'CHK' | 'SAL' | 'RET' | 'CAN';
 
 export async function generateOrderNumber(

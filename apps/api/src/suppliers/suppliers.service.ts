@@ -39,12 +39,18 @@ export class SuppliersService {
       select: { emailVerifiedAt: true },
     });
     if (!user?.emailVerifiedAt) {
-      throw new BadRequestException('Email must be verified before organization registration');
+      throw new BadRequestException(
+        'Email must be verified before organization registration',
+      );
     }
 
-    const existing = await this.prisma.supplier.findUnique({ where: { userId } });
+    const existing = await this.prisma.supplier.findUnique({
+      where: { userId },
+    });
     if (existing) {
-      throw new ConflictException('Supplier profile already exists for this user');
+      throw new ConflictException(
+        'Supplier profile already exists for this user',
+      );
     }
 
     const registerExists = await this.prisma.supplier.findUnique({
@@ -76,19 +82,25 @@ export class SuppliersService {
   }
 
   async getProfile(userId: string) {
-    const supplier = await this.prisma.supplier.findUnique({ where: { userId } });
+    const supplier = await this.prisma.supplier.findUnique({
+      where: { userId },
+    });
     if (!supplier) throw new NotFoundException('Supplier profile not found');
     return supplier;
   }
 
   async getById(supplierId: string) {
-    const supplier = await this.prisma.supplier.findUnique({ where: { id: supplierId } });
+    const supplier = await this.prisma.supplier.findUnique({
+      where: { id: supplierId },
+    });
     if (!supplier) throw new NotFoundException('Supplier not found');
     return supplier;
   }
 
   async updateProfile(userId: string, data: UpdateSupplierProfileDto) {
-    const supplier = await this.prisma.supplier.findUnique({ where: { userId } });
+    const supplier = await this.prisma.supplier.findUnique({
+      where: { userId },
+    });
     if (!supplier) throw new NotFoundException('Supplier profile not found');
 
     const updated = await this.prisma.supplier.update({

@@ -8,6 +8,7 @@ import {
 import { Request } from 'express';
 import { Observable, mergeMap } from 'rxjs';
 import { AuditService } from '../../audit/audit.service';
+import type { JwtPayload } from '@pharmasyn/types';
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const SENSITIVE_KEYS = new Set([
@@ -25,9 +26,14 @@ export class AuditInterceptor implements NestInterceptor {
 
   constructor(private readonly auditService: AuditService) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler<unknown>,
+  ): Observable<unknown> {
     if (context.getType() !== 'http') return next.handle();
-    const request = context.switchToHttp().getRequest<Request & { user?: any }>();
+    const request = context
+      .switchToHttp()
+      .getRequest<Request & { user?: JwtPayload }>();
     if (!MUTATING_METHODS.has(request.method)) return next.handle();
 
     return next.handle().pipe(
@@ -58,7 +64,10 @@ export class AuditInterceptor implements NestInterceptor {
   }
 
   private entityTypeFromPath(path: string) {
-    const segment = path.split('/').filter(Boolean).find((part) => part !== 'api' && part !== 'v1');
+    const segment = path
+      .split('/')
+      .filter(Boolean)
+      .find((part) => part !== 'api' && part !== 'v1');
     return segment || 'Unknown';
   }
 
@@ -76,7 +85,9 @@ export class AuditInterceptor implements NestInterceptor {
   private sanitize(value: unknown): Record<string, unknown> | undefined {
     if (!value || typeof value !== 'object') return undefined;
     const result: Record<string, unknown> = {};
-    for (const [key, fieldValue] of Object.entries(value as Record<string, unknown>)) {
+    for (const [key, fieldValue] of Object.entries(
+      value as Record<string, unknown>,
+    )) {
       result[key] = SENSITIVE_KEYS.has(key) ? '[REDACTED]' : fieldValue;
     }
     return result;

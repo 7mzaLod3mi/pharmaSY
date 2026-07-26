@@ -13,11 +13,7 @@ import {
 import { UserRole } from '@pharmasyn/types';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReportFiltersDto } from './dto/reports.dto';
-import {
-  ReportCell,
-  ReportColumn,
-  ReportResult,
-} from './report.types';
+import { ReportCell, ReportColumn, ReportResult } from './report.types';
 
 const PHARMACY_REPORTS = new Set<ReportType>([
   ReportType.PHARMACY_POS_SALES,
@@ -48,7 +44,8 @@ export class ReportsService {
 
   catalog(role: UserRole) {
     if (role === UserRole.ADMIN) return [];
-    const allowed = role === UserRole.PHARMACY ? PHARMACY_REPORTS : SUPPLIER_REPORTS;
+    const allowed =
+      role === UserRole.PHARMACY ? PHARMACY_REPORTS : SUPPLIER_REPORTS;
     return [...allowed].map((reportType) => ({
       reportType,
       titleAr: TITLES[reportType].ar,
@@ -57,7 +54,8 @@ export class ReportsService {
   }
 
   assertAccess(reportType: ReportType, role: UserRole, orgId?: string) {
-    if (!orgId) throw new ForbiddenException('Organization context is required');
+    if (!orgId)
+      throw new ForbiddenException('Organization context is required');
     const allowed =
       role === UserRole.PHARMACY
         ? PHARMACY_REPORTS
@@ -65,7 +63,9 @@ export class ReportsService {
           ? SUPPLIER_REPORTS
           : undefined;
     if (!allowed?.has(reportType)) {
-      throw new ForbiddenException('This report is not available for your organization role');
+      throw new ForbiddenException(
+        'This report is not available for your organization role',
+      );
     }
   }
 
@@ -182,11 +182,16 @@ export class ReportsService {
       refundAmount: this.number(item.refundAmount),
       reason: item.reason,
     }));
-    return this.result(ReportType.PHARMACY_POS_RETURNS, POS_RETURN_COLUMNS, rows, {
-      returnCount: rows.length,
-      returnedValue: this.sum(rows, 'returnAmount'),
-      refundedValue: this.sum(rows, 'refundAmount'),
-    });
+    return this.result(
+      ReportType.PHARMACY_POS_RETURNS,
+      POS_RETURN_COLUMNS,
+      rows,
+      {
+        returnCount: rows.length,
+        returnedValue: this.sum(rows, 'returnAmount'),
+        refundedValue: this.sum(rows, 'refundAmount'),
+      },
+    );
   }
 
   private async supplierSales(supplierId: string, filters: ReportFiltersDto) {
@@ -214,13 +219,18 @@ export class ReportsService {
       itemCount: order._count.items,
       total: this.number(order.totalAmount),
     }));
-    return this.result(ReportType.SUPPLIER_SALES, SUPPLIER_SALES_COLUMNS, rows, {
-      orderCount: rows.length,
-      orderValue: this.sum(rows, 'total'),
-      deliveredValue: rows
-        .filter((row) => row.status === OrderStatus.DELIVERED)
-        .reduce((sum, row) => sum + row.total, 0),
-    });
+    return this.result(
+      ReportType.SUPPLIER_SALES,
+      SUPPLIER_SALES_COLUMNS,
+      rows,
+      {
+        orderCount: rows.length,
+        orderValue: this.sum(rows, 'total'),
+        deliveredValue: rows
+          .filter((row) => row.status === OrderStatus.DELIVERED)
+          .reduce((sum, row) => sum + row.total, 0),
+      },
+    );
   }
 
   private async c2cExchange(pharmacyId: string, filters: ReportFiltersDto) {
@@ -241,13 +251,16 @@ export class ReportsService {
       orderBy: { createdAt: 'desc' },
     });
     const rows = orders.map((order) => {
-      const direction = order.sellerPharmacyId === pharmacyId ? 'SALE' : 'PURCHASE';
+      const direction =
+        order.sellerPharmacyId === pharmacyId ? 'SALE' : 'PURCHASE';
       return {
         orderNumber: order.orderNumber,
         createdAt: order.createdAt,
         direction,
         counterparty:
-          direction === 'SALE' ? order.pharmacy.name : order.sellerPharmacy?.name ?? '',
+          direction === 'SALE'
+            ? order.pharmacy.name
+            : (order.sellerPharmacy?.name ?? ''),
         status: order.status,
         itemCount: order._count.items,
         total: this.number(order.totalAmount),
@@ -264,7 +277,10 @@ export class ReportsService {
     });
   }
 
-  private async ordersFulfillment(context: ReportContext, filters: ReportFiltersDto) {
+  private async ordersFulfillment(
+    context: ReportContext,
+    filters: ReportFiltersDto,
+  ) {
     const status = this.orderStatus(filters.status);
     const organizationWhere: Prisma.OrderWhereInput =
       context.role === UserRole.SUPPLIER
@@ -324,7 +340,9 @@ export class ReportsService {
         pharmacyId,
         deletedAt: null,
         ...(filters.productId ? { productId: filters.productId } : {}),
-        ...(filters.categoryId ? { product: { categoryId: filters.categoryId } } : {}),
+        ...(filters.categoryId
+          ? { product: { categoryId: filters.categoryId } }
+          : {}),
       },
       include: {
         product: {
@@ -351,15 +369,23 @@ export class ReportsService {
         availableValue: cost * available,
       };
     });
-    return this.result(ReportType.INVENTORY_VALUE, INVENTORY_VALUE_COLUMNS, rows, {
-      batchCount: rows.length,
-      unitsOnHand: this.sum(rows, 'quantity'),
-      totalStockValue: this.sum(rows, 'stockValue'),
-      availableStockValue: this.sum(rows, 'availableValue'),
-    });
+    return this.result(
+      ReportType.INVENTORY_VALUE,
+      INVENTORY_VALUE_COLUMNS,
+      rows,
+      {
+        batchCount: rows.length,
+        unitsOnHand: this.sum(rows, 'quantity'),
+        totalStockValue: this.sum(rows, 'stockValue'),
+        availableStockValue: this.sum(rows, 'availableValue'),
+      },
+    );
   }
 
-  private async inventoryMovements(pharmacyId: string, filters: ReportFiltersDto) {
+  private async inventoryMovements(
+    pharmacyId: string,
+    filters: ReportFiltersDto,
+  ) {
     const movementType = this.movementType(filters.status);
     const movements = await this.prisma.inventoryMovement.findMany({
       where: {
@@ -391,22 +417,17 @@ export class ReportsService {
       reference: item.referenceId,
       reason: item.reason,
     }));
-    return this.result(
-      ReportType.INVENTORY_MOVEMENTS,
-      MOVEMENT_COLUMNS,
-      rows,
-      {
-        movementCount: rows.length,
-        inboundUnits: rows
-          .filter((row) => row.difference > 0)
+    return this.result(ReportType.INVENTORY_MOVEMENTS, MOVEMENT_COLUMNS, rows, {
+      movementCount: rows.length,
+      inboundUnits: rows
+        .filter((row) => row.difference > 0)
+        .reduce((sum, row) => sum + row.difference, 0),
+      outboundUnits: Math.abs(
+        rows
+          .filter((row) => row.difference < 0)
           .reduce((sum, row) => sum + row.difference, 0),
-        outboundUnits: Math.abs(
-          rows
-            .filter((row) => row.difference < 0)
-            .reduce((sum, row) => sum + row.difference, 0),
-        ),
-      },
-    );
+      ),
+    });
   }
 
   private async lowStock(pharmacyId: string, filters: ReportFiltersDto) {
@@ -415,7 +436,9 @@ export class ReportsService {
         pharmacyId,
         deletedAt: null,
         ...(filters.productId ? { productId: filters.productId } : {}),
-        ...(filters.categoryId ? { product: { categoryId: filters.categoryId } } : {}),
+        ...(filters.categoryId
+          ? { product: { categoryId: filters.categoryId } }
+          : {}),
       },
       include: {
         product: {
@@ -466,7 +489,9 @@ export class ReportsService {
         quantity: { gt: 0 },
         expiryDate: { lte: until },
         ...(filters.productId ? { productId: filters.productId } : {}),
-        ...(filters.categoryId ? { product: { categoryId: filters.categoryId } } : {}),
+        ...(filters.categoryId
+          ? { product: { categoryId: filters.categoryId } }
+          : {}),
       },
       include: {
         product: {
@@ -506,7 +531,10 @@ export class ReportsService {
       : this.supplierPerformance(context.orgId, filters);
   }
 
-  private async pharmacyPerformance(pharmacyId: string, filters: ReportFiltersDto) {
+  private async pharmacyPerformance(
+    pharmacyId: string,
+    filters: ReportFiltersDto,
+  ) {
     const items = await this.prisma.saleItem.findMany({
       where: {
         sale: {
@@ -515,11 +543,15 @@ export class ReportsService {
           status: { not: SaleStatus.CANCELLED },
         },
         ...(filters.productId ? { productId: filters.productId } : {}),
-        ...(filters.categoryId ? { product: { categoryId: filters.categoryId } } : {}),
+        ...(filters.categoryId
+          ? { product: { categoryId: filters.categoryId } }
+          : {}),
       },
       include: {
         product: {
-          include: { category: { select: { id: true, nameAr: true, nameEn: true } } },
+          include: {
+            category: { select: { id: true, nameAr: true, nameEn: true } },
+          },
         },
       },
     });
@@ -543,7 +575,10 @@ export class ReportsService {
     );
   }
 
-  private async supplierPerformance(supplierId: string, filters: ReportFiltersDto) {
+  private async supplierPerformance(
+    supplierId: string,
+    filters: ReportFiltersDto,
+  ) {
     const items = await this.prisma.orderItem.findMany({
       where: {
         order: {
@@ -573,17 +608,19 @@ export class ReportsService {
       items.flatMap((item) => {
         const product = item.supplierProduct?.product;
         if (!product) return [];
-        return [{
-          productId: item.productId,
-          productAr: product.tradeNameAr,
-          productEn: product.tradeNameEn,
-          categoryId: product.category.id,
-          categoryAr: product.category.nameAr,
-          categoryEn: product.category.nameEn,
-          quantity: item.quantity,
-          revenue: this.number(item.subtotal),
-          cost: 0,
-        }];
+        return [
+          {
+            productId: item.productId,
+            productAr: product.tradeNameAr,
+            productEn: product.tradeNameEn,
+            categoryId: product.category.id,
+            categoryAr: product.category.nameAr,
+            categoryEn: product.category.nameEn,
+            quantity: item.quantity,
+            revenue: this.number(item.subtotal),
+            cost: 0,
+          },
+        ];
       }),
     );
   }
@@ -655,7 +692,9 @@ export class ReportsService {
     };
   }
 
-  private dateFilter(filters: ReportFiltersDto): Prisma.DateTimeFilter | undefined {
+  private dateFilter(
+    filters: ReportFiltersDto,
+  ): Prisma.DateTimeFilter | undefined {
     if (!filters.from && !filters.to) return undefined;
     return {
       ...(filters.from ? { gte: new Date(filters.from) } : {}),
@@ -723,7 +762,10 @@ const col = (
 
 export const TITLES: Record<ReportType, { ar: string; en: string }> = {
   PHARMACY_POS_SALES: { ar: 'مبيعات نقاط البيع', en: 'Pharmacy POS Sales' },
-  PHARMACY_POS_RETURNS: { ar: 'مرتجعات نقاط البيع', en: 'Pharmacy POS Returns' },
+  PHARMACY_POS_RETURNS: {
+    ar: 'مرتجعات نقاط البيع',
+    en: 'Pharmacy POS Returns',
+  },
   SUPPLIER_SALES: { ar: 'مبيعات المورد', en: 'Supplier Sales' },
   C2C_EXCHANGE: { ar: 'مبيعات ومشتريات التبادل', en: 'C2C Sales & Purchases' },
   ORDERS_FULFILLMENT: { ar: 'الطلبات والتنفيذ', en: 'Orders & Fulfillment' },

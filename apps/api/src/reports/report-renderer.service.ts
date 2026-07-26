@@ -40,7 +40,9 @@ export class ReportRendererService {
             isArabic ? column.labelAr.length : column.labelEn.length,
             ...result.rows
               .slice(0, 200)
-              .map((row) => String(this.rawValue(row[column.key]) ?? '').length),
+              .map(
+                (row) => String(this.rawValue(row[column.key]) ?? '').length,
+              ),
           ) + 2,
         ),
       ),
@@ -62,8 +64,16 @@ export class ReportRendererService {
     summary['!cols'] = [{ wch: 34 }, { wch: 22 }];
 
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, isArabic ? 'البيانات' : 'Data');
-    XLSX.utils.book_append_sheet(workbook, summary, isArabic ? 'الملخص' : 'Summary');
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      isArabic ? 'البيانات' : 'Data',
+    );
+    XLSX.utils.book_append_sheet(
+      workbook,
+      summary,
+      isArabic ? 'الملخص' : 'Summary',
+    );
     workbook.Workbook = { Views: [{ RTL: isArabic }] };
     const buffer = XLSX.write(workbook, {
       type: 'buffer',
@@ -168,7 +178,9 @@ export class ReportRendererService {
     const rowHeight = 26;
     const renderHeader = () => {
       const y = document.y;
-      document.rect(document.page.margins.left, y, contentWidth, rowHeight).fill('#12372a');
+      document
+        .rect(document.page.margins.left, y, contentWidth, rowHeight)
+        .fill('#12372a');
       columns.forEach((column, index) => {
         document
           .fillColor('#ffffff')
@@ -202,7 +214,11 @@ export class ReportRendererService {
         .rect(document.page.margins.left, y, contentWidth, rowHeight)
         .fill(rowIndex % 2 ? '#f8faf9' : '#ffffff');
       columns.forEach((column, index) => {
-        const formatted = this.formatValue(row[column.key], column.type, locale);
+        const formatted = this.formatValue(
+          row[column.key],
+          column.type,
+          locale,
+        );
         document
           .fillColor('#1f2937')
           .fontSize(7.5)
@@ -250,7 +266,12 @@ export class ReportRendererService {
 
   private fontPath() {
     const candidates = [
-      path.join(process.cwd(), 'assets', 'fonts', 'NotoSansArabic-Variable.ttf'),
+      path.join(
+        process.cwd(),
+        'assets',
+        'fonts',
+        'NotoSansArabic-Variable.ttf',
+      ),
       path.join(
         process.cwd(),
         'apps',
@@ -259,7 +280,14 @@ export class ReportRendererService {
         'fonts',
         'NotoSansArabic-Variable.ttf',
       ),
-      path.join(__dirname, '..', '..', 'assets', 'fonts', 'NotoSansArabic-Variable.ttf'),
+      path.join(
+        __dirname,
+        '..',
+        '..',
+        'assets',
+        'fonts',
+        'NotoSansArabic-Variable.ttf',
+      ),
     ];
     const found = candidates.find((candidate) => fs.existsSync(candidate));
     if (!found) {
@@ -269,6 +297,7 @@ export class ReportRendererService {
   }
 
   private display(value: string, _isArabic: boolean) {
+    void _isArabic;
     return value;
   }
 
@@ -299,13 +328,19 @@ export class ReportRendererService {
   ) {
     if (value === null || value === undefined) return '';
     if (value instanceof Date || type === 'date') {
-      return this.date(value instanceof Date ? value : new Date(String(value)), locale);
+      return this.date(
+        value instanceof Date ? value : new Date(String(value)),
+        locale,
+      );
     }
     if (type === 'money') {
-      return new Intl.NumberFormat(locale === ReportLocale.AR ? 'ar-SY' : 'en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(Number(value));
+      return new Intl.NumberFormat(
+        locale === ReportLocale.AR ? 'ar-SY' : 'en-US',
+        {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        },
+      ).format(Number(value));
     }
     if (type === 'number' && typeof value === 'number') {
       return new Intl.NumberFormat(
@@ -326,14 +361,10 @@ export class ReportRendererService {
   }
 
   private rawValue(value: ReportCell) {
-    return value instanceof Date ? value : value ?? '';
+    return value instanceof Date ? value : (value ?? '');
   }
 
-  private excelValue(
-    value: ReportCell,
-    type: string,
-    locale: ReportLocale,
-  ) {
+  private excelValue(value: ReportCell, type: string, locale: ReportLocale) {
     if (type === 'status' && locale === ReportLocale.AR && value != null) {
       return ARABIC_STATUS_LABELS[String(value)] ?? String(value);
     }

@@ -54,8 +54,13 @@ const enumPairs = [
   ['RequestStatus', PrismaRequestStatus, RequestStatus],
 ] as const;
 
-describe.each(enumPairs)('%s shared contract', (_name, prismaEnum, sharedEnum) => {
-  it('matches the generated database enum exactly', () => {
-    expect(Object.values(sharedEnum).sort()).toEqual(Object.values(prismaEnum).sort());
-  });
-});
+describe.each(enumPairs)(
+  '%s shared contract',
+  (_name, prismaEnum, sharedEnum) => {
+    it('matches the generated database enum exactly', () => {
+      expect(Object.values(sharedEnum).sort()).toEqual(
+        Object.values(prismaEnum).sort(),
+      );
+    });
+  },
+);

@@ -1,11 +1,16 @@
-import { INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
+import {
+  INestApplication,
+  ValidationPipe,
+  VersioningType,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { randomUUID } from 'crypto';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { UploadService } from '../src/upload/upload.service';
+import request, { type Response as SupertestResponse } from 'supertest';
+import * as bcrypt from 'bcrypt';
 
-const request = require('supertest');
 jest.setTimeout(30000);
 
 function assertDedicatedTestDatabase() {
@@ -17,7 +22,9 @@ function assertDedicatedTestDatabase() {
   const parsed = new URL(databaseUrl);
   const target = `${parsed.pathname}/${parsed.searchParams.get('schema') ?? ''}`;
   if (!/test/i.test(target)) {
-    throw new Error('Refusing destructive E2E cleanup: database name or schema must contain "test"');
+    throw new Error(
+      'Refusing destructive E2E cleanup: database name or schema must contain "test"',
+    );
   }
 }
 
@@ -67,7 +74,7 @@ describe('Pharmacy POS workflow (e2e)', () => {
       .overrideProvider(UploadService)
       .useValue({
         uploadPrivateBuffer: jest.fn(
-          async (
+          (
             buffer: Buffer,
             key: string,
             contentType: string,
@@ -81,9 +88,10 @@ describe('Pharmacy POS workflow (e2e)', () => {
             });
           },
         ),
-        getPrivateDownloadUrl: jest.fn(
-          async (key: string) =>
+        getPrivateDownloadUrl: jest.fn((key: string) =>
+          Promise.resolve(
             `https://private-r2.test/signed/${encodeURIComponent(key)}`,
+          ),
         ),
       })
       .compile();
@@ -133,7 +141,6 @@ describe('Pharmacy POS workflow (e2e)', () => {
     await prisma.refreshToken.deleteMany();
     await prisma.user.deleteMany();
 
-    const bcrypt = require('bcrypt');
     const passwordHash = await bcrypt.hash('password123', 10);
     const pharmacyUser = await prisma.user.create({
       data: {
@@ -187,7 +194,11 @@ describe('Pharmacy POS workflow (e2e)', () => {
     otherPharmacyId = otherPharmacy.id;
 
     const category = await prisma.category.create({
-      data: { nameAr: 'اختبار نقطة البيع', nameEn: 'POS Test', slug: 'pos-test' },
+      data: {
+        nameAr: 'اختبار نقطة البيع',
+        nameEn: 'POS Test',
+        slug: 'pos-test',
+      },
     });
     const product = await prisma.product.create({
       data: {
@@ -295,7 +306,9 @@ describe('Pharmacy POS workflow (e2e)', () => {
       orderBy: { batchNumber: 'asc' },
     });
     expect(movements).toHaveLength(2);
-    expect(movements.reduce((sum, movement) => sum + movement.quantity, 0)).toBe(4);
+    expect(
+      movements.reduce((sum, movement) => sum + movement.quantity, 0),
+    ).toBe(4);
   });
 
   it('replays the same mutation without deducting stock twice', async () => {
@@ -308,7 +321,9 @@ describe('Pharmacy POS workflow (e2e)', () => {
     expect(response.body.data.id).toBe(saleId);
     expect(await prisma.sale.count()).toBe(1);
     expect(
-      await prisma.inventoryMovement.count({ where: { saleId, type: 'POS_SALE' } }),
+      await prisma.inventoryMovement.count({
+        where: { saleId, type: 'POS_SALE' },
+      }),
     ).toBe(2);
   });
 
@@ -445,7 +460,9 @@ describe('Pharmacy POS workflow (e2e)', () => {
         .send(createPayload()),
     ]);
 
-    expect(responses.map((response) => response.status).sort()).toEqual([201, 400]);
+    expect(responses.map((response) => response.status).sort()).toEqual([
+      201, 400,
+    ]);
     const inventory = await prisma.inventory.findFirst({
       where: { pharmacyId, productId: concurrentProductId },
     });
@@ -495,9 +512,11 @@ describe('Pharmacy POS workflow (e2e)', () => {
       .get('/api/v1/reports/PHARMACY_POS_SALES')
       .set('Authorization', `Bearer ${pharmacyToken}`)
       .expect(200);
-    expect(sales.body.data.rows.some((row: { saleNumber: string }) =>
-      row.saleNumber.startsWith('SAL-'),
-    )).toBe(true);
+    expect(
+      sales.body.data.rows.some((row: { saleNumber: string }) =>
+        row.saleNumber.startsWith('SAL-'),
+      ),
+    ).toBe(true);
     expect(Number(sales.body.data.summary.netSales)).toBeGreaterThan(0);
 
     const returns = await request(app.getHttpServer())
@@ -524,11 +543,16 @@ describe('Pharmacy POS workflow (e2e)', () => {
       .query({ format: 'XLSX', locale: 'AR' })
       .set('Authorization', `Bearer ${pharmacyToken}`)
       .buffer(true)
-      .parse((response: NodeJS.ReadableStream, callback: (error: Error | null, body?: Buffer) => void) => {
-        const chunks: Buffer[] = [];
-        response.on('data', (chunk: Buffer) => chunks.push(chunk));
-        response.on('end', () => callback(null, Buffer.concat(chunks)));
-      })
+      .parse(
+        (
+          response: SupertestResponse,
+          callback: (error: Error | null, body: Buffer) => void,
+        ) => {
+          const chunks: Buffer[] = [];
+          response.on('data', (chunk: Buffer) => chunks.push(chunk));
+          response.on('end', () => callback(null, Buffer.concat(chunks)));
+        },
+      )
       .expect(200);
     expect(direct.headers['content-type']).toContain('spreadsheetml');
     expect((direct.body as Buffer).subarray(0, 2).toString()).toBe('PK');

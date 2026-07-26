@@ -61,5 +61,10 @@ export function roleHasPermissions(
   requiredPermissions: readonly string[],
 ): boolean {
   const granted = rolePermissions[role];
-  return Boolean(granted) && requiredPermissions.every((permission) => granted.has(permission as Permission));
+  return (
+    Boolean(granted) &&
+    requiredPermissions.every((permission) =>
+      granted.has(permission as Permission),
+    )
+  );
 }

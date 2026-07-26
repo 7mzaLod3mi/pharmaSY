@@ -1,9 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import {
-  DiscountType,
-  Prisma,
-  SalePaymentMethod,
-} from '@prisma/client';
+import { DiscountType, Prisma, SalePaymentMethod } from '@prisma/client';
 import { PosService } from './pos.service';
 
 interface PosServiceInternals {

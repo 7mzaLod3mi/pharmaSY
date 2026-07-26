@@ -9,7 +9,10 @@ describe('validateEnvironment', () => {
 
   it('rejects missing production JWT secrets', () => {
     expect(() =>
-      validateEnvironment({ NODE_ENV: 'production', DATABASE_URL: 'postgresql://db' }),
+      validateEnvironment({
+        NODE_ENV: 'production',
+        DATABASE_URL: 'postgresql://db',
+      }),
     ).toThrow('JWT_SECRET, JWT_REFRESH_SECRET');
   });
 

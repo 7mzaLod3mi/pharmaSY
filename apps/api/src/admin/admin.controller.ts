@@ -1,7 +1,6 @@
 import {
   Controller,
   Get,
-  Post,
   Patch,
   Param,
   Body,
@@ -9,8 +8,13 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
-import { IsString, IsOptional, MinLength } from 'class-validator';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
+import { IsString, MinLength } from 'class-validator';
 import { AdminService } from './admin.service';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -58,10 +62,7 @@ export class AdminController {
   @ApiOperation({ summary: 'Get pending supplier approvals' })
   @ApiQuery({ name: 'page', required: false })
   @ApiQuery({ name: 'limit', required: false })
-  getPendingSuppliers(
-    @Query('page') page = '1',
-    @Query('limit') limit = '20',
-  ) {
+  getPendingSuppliers(@Query('page') page = '1', @Query('limit') limit = '20') {
     return this.adminService.getPendingSuppliers(+page, +limit);
   }
 
@@ -125,14 +126,14 @@ export class AdminController {
   @Patch('users/:id/suspend')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Suspend a user' })
-  suspendUser(@Param('id') id: string) {
-    return this.adminService.suspendUser(id);
+  suspendUser(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.adminService.suspendUser(id, user.sub);
   }
 
   @Patch('users/:id/activate')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Activate a user' })
-  activateUser(@Param('id') id: string) {
-    return this.adminService.activateUser(id);
+  activateUser(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.adminService.activateUser(id, user.sub);
   }
 }

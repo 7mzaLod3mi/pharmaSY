@@ -72,7 +72,8 @@ describe('ReportExportsService', () => {
     }));
 
     const first = await service.create(context, dto);
-    const requestHash = prisma.reportExport.create.mock.calls[0][0].data.requestHash;
+    const requestHash =
+      prisma.reportExport.create.mock.calls[0][0].data.requestHash;
     prisma.reportExport.findUnique.mockResolvedValue({
       ...first,
       requestHash,
@@ -95,7 +96,9 @@ describe('ReportExportsService', () => {
       requestHash: 'different-hash',
     });
 
-    await expect(service.create(context, dto)).rejects.toThrow(ConflictException);
+    await expect(service.create(context, dto)).rejects.toThrow(
+      ConflictException,
+    );
   });
 
   it('marks the database record failed when BullMQ is unavailable', async () => {

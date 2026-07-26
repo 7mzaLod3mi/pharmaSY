@@ -1036,7 +1036,8 @@ model ProductImport {
   pharmacyId   String?
   pharmacy     Pharmacy?    @relation(fields: [pharmacyId], references: [id])
   fileName     String
-  fileUrl      String
+  fileUrl      String?
+  storageKey   String?
   status       ImportStatus @default(QUEUED)
   totalRows    Int?
   createdRows  Int          @default(0)

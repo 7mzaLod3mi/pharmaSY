@@ -10,7 +10,13 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiPropertyOptional, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiPropertyOptional,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import {
   IsArray,
   IsEnum,
@@ -83,7 +89,9 @@ export class CreateOrderDto {
   @IsUUID()
   clientMutationId?: string;
 
-  @ApiPropertyOptional({ description: 'Stable device identifier for future offline sync' })
+  @ApiPropertyOptional({
+    description: 'Stable device identifier for future offline sync',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(128)
@@ -107,7 +115,8 @@ export class OrdersController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create an idempotent multi-seller checkout' })
   checkout(@CurrentUser() user: JwtPayload, @Body() dto: CreateOrderDto) {
-    if (!user.orgId) throw new BadRequestException('No organization associated');
+    if (!user.orgId)
+      throw new BadRequestException('No organization associated');
     return this.ordersService.checkout(user.orgId, user.sub, dto);
   }
 
@@ -122,8 +131,13 @@ export class OrdersController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
-    if (!user.orgId) throw new BadRequestException('No organization associated');
-    return this.ordersService.findPharmacyOrders(user.orgId, Number(page) || 1, Number(limit) || 20);
+    if (!user.orgId)
+      throw new BadRequestException('No organization associated');
+    return this.ordersService.findPharmacyOrders(
+      user.orgId,
+      Number(page) || 1,
+      Number(limit) || 20,
+    );
   }
 
   @Get('supplier')
@@ -136,7 +150,8 @@ export class OrdersController {
     @Query('limit') limit?: string,
     @Query('status') status?: OrderStatus,
   ) {
-    if (!user.orgId) throw new BadRequestException('No organization associated');
+    if (!user.orgId)
+      throw new BadRequestException('No organization associated');
     return this.ordersService.findSupplierOrders(
       user.orgId,
       Number(page) || 1,
@@ -150,20 +165,25 @@ export class OrdersController {
   @RequirePermissions(Permissions.ORDERS_READ)
   @ApiOperation({ summary: 'Get an order visible to the current organization' })
   getOrderDetails(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
-    if (!user.orgId) throw new BadRequestException('No organization associated');
+    if (!user.orgId)
+      throw new BadRequestException('No organization associated');
     return this.ordersService.getOrderDetails(id, user.orgId, user.role);
   }
 
   @Patch(':id/status')
   @Roles(UserRole.SUPPLIER, UserRole.PHARMACY)
   @RequirePermissions(Permissions.ORDERS_MANAGE)
-  @ApiOperation({ summary: 'Apply a validated seller-side order status transition' })
+  @ApiOperation({
+    summary:
+      'Apply a validated order transition; sellers fulfill through SHIPPED and the buyer confirms DELIVERED',
+  })
   updateStatus(
     @CurrentUser() user: JwtPayload,
     @Param('id') id: string,
     @Body() dto: UpdateOrderStatusDto,
   ) {
-    if (!user.orgId) throw new BadRequestException('No organization associated');
+    if (!user.orgId)
+      throw new BadRequestException('No organization associated');
     return this.ordersService.updateOrderStatus(
       id,
       user.orgId,

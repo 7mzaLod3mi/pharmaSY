@@ -65,7 +65,9 @@ export class ReportsController {
       'clientRequestId makes retries idempotent. Data scope is always derived from the authenticated organization.',
   })
   @ApiBody({ type: CreateReportExportDto })
-  @ApiCreatedResponse({ description: 'Export queued, or existing idempotent request returned' })
+  @ApiCreatedResponse({
+    description: 'Export queued, or existing idempotent request returned',
+  })
   createExport(
     @CurrentUser() user: JwtPayload,
     @Body() dto: CreateReportExportDto,

@@ -3,13 +3,21 @@ import { Permissions, roleHasPermissions } from './permissions';
 
 describe('role permission matrix', () => {
   it('does not grant administrative access to pharmacy or supplier users', () => {
-    expect(roleHasPermissions(UserRole.PHARMACY, [Permissions.ADMIN_MANAGE])).toBe(false);
-    expect(roleHasPermissions(UserRole.SUPPLIER, [Permissions.ADMIN_MANAGE])).toBe(false);
+    expect(
+      roleHasPermissions(UserRole.PHARMACY, [Permissions.ADMIN_MANAGE]),
+    ).toBe(false);
+    expect(
+      roleHasPermissions(UserRole.SUPPLIER, [Permissions.ADMIN_MANAGE]),
+    ).toBe(false);
   });
 
   it('keeps inventory management pharmacy-only', () => {
-    expect(roleHasPermissions(UserRole.PHARMACY, [Permissions.INVENTORY_MANAGE])).toBe(true);
-    expect(roleHasPermissions(UserRole.SUPPLIER, [Permissions.INVENTORY_MANAGE])).toBe(false);
+    expect(
+      roleHasPermissions(UserRole.PHARMACY, [Permissions.INVENTORY_MANAGE]),
+    ).toBe(true);
+    expect(
+      roleHasPermissions(UserRole.SUPPLIER, [Permissions.INVENTORY_MANAGE]),
+    ).toBe(false);
   });
 
   it('requires every requested permission', () => {

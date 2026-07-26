@@ -56,4 +56,11 @@ export const ordersHttpRepository: OrdersRepository = {
       data: { status: "CANCELLED" },
     });
   },
+  async confirmDelivery(id: string) {
+    await apiRequest({
+      method: "PATCH",
+      url: `/orders/${id}/status`,
+      data: { status: "DELIVERED" },
+    });
+  },
 };

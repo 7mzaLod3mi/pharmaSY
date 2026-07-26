@@ -5,7 +5,10 @@ export interface PaginatedResult<T> {
   meta: PaginationMeta;
 }
 
-export function getPaginationParams(query: PaginationQuery): { skip: number; take: number } {
+export function getPaginationParams(query: PaginationQuery): {
+  skip: number;
+  take: number;
+} {
   const page = Math.max(1, query.page || 1);
   const limit = Math.min(100, Math.max(1, query.limit || 20));
   return {
@@ -17,7 +20,7 @@ export function getPaginationParams(query: PaginationQuery): { skip: number; tak
 export function buildPaginationMeta(
   total: number,
   page: number,
-  limit: number
+  limit: number,
 ): PaginationMeta {
   const totalPages = Math.ceil(total / limit);
   return {

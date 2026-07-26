@@ -1,8 +1,4 @@
-import {
-  ReportExportFormat,
-  ReportLocale,
-  ReportType,
-} from '@prisma/client';
+import { ReportExportFormat, ReportLocale, ReportType } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 import {
   IsDateString,

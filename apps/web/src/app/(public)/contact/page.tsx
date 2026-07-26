@@ -1,15 +1,11 @@
 import { PublicHeader } from "@/components/layout/public-header";
 import { PublicFooter } from "@/components/layout/public-footer";
-import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Mail, MapPin, Phone } from "lucide-react";
+import { Mail } from "lucide-react";
 
-const info = [
-  { icon: Mail, label: "hello@pharmasy.com" },
-  { icon: Phone, label: "+962 6 000 0000" },
-  { icon: MapPin, label: "Amman, Jordan" },
-];
+const supportEmail =
+  process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "hello@pharmasy.com";
 
 export default function ContactPage() {
   return (
@@ -28,47 +24,31 @@ export default function ContactPage() {
               Tell us about your pharmacy network or supply business and
               we&apos;ll help you get set up.
             </p>
-            <div className="mt-8 space-y-4">
-              {info.map((i) => (
-                <div key={i.label} className="flex items-center gap-3">
-                  <div className="flex size-9 items-center justify-center rounded-[var(--radius-md)] bg-brand-50 text-brand-600">
-                    <i.icon className="size-4" />
-                  </div>
-                  <span className="text-[13.5px] text-foreground/80">{i.label}</span>
-                </div>
-              ))}
+            <div className="mt-8 flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-[var(--radius-md)] bg-brand-50 text-brand-600">
+                <Mail className="size-4" />
+              </div>
+              <a
+                className="text-[13.5px] text-foreground/80 hover:text-brand-600 hover:underline"
+                href={`mailto:${supportEmail}`}
+              >
+                {supportEmail}
+              </a>
             </div>
           </div>
 
           <Card className="p-6">
-            <form className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="name">Full name</Label>
-                  <Input id="name" placeholder="Your name" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="company">Company</Label>
-                  <Input id="company" placeholder="Organization" />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="email">Work email</Label>
-                <Input id="email" type="email" placeholder="you@company.com" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="message">Message</Label>
-                <textarea
-                  id="message"
-                  rows={4}
-                  placeholder="Tell us about your needs…"
-                  className="flex w-full rounded-[var(--radius-sm)] border border-border-strong bg-surface px-3 py-2 text-sm shadow-[var(--shadow-xs)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30 focus-visible:border-brand-500"
-                />
-              </div>
-              <Button type="submit" size="lg" className="w-full">
-                Send message
+            <div className="space-y-5">
+              <h2 className="text-xl font-semibold">Contact PharmaSY support</h2>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Send your organization details and a short description of what
+                you need. Your email application will open with the verified
+                support address.
+              </p>
+              <Button asChild size="lg" className="w-full">
+                <a href={`mailto:${supportEmail}`}>Email support</a>
               </Button>
-            </form>
+            </div>
           </Card>
         </div>
       </section>

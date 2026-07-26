@@ -7,7 +7,13 @@ import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { useCreateBatch, useAdjustBatch, useDeleteBatch, useInventoryMovements } from "../hooks/use-inventory";
+import {
+  useCreateBatch,
+  useAdjustBatch,
+  useDeleteBatch,
+  useInventoryMovements,
+  useUpdateBatch,
+} from "../hooks/use-inventory";
 import { Trash2, Edit2, Plus, Loader2 } from "lucide-react";
 import type {
   InventoryAdjustmentType,
@@ -30,6 +36,7 @@ export function ProductBatchesDialog({
   
   const createBatch = useCreateBatch();
   const adjustBatch = useAdjustBatch();
+  const updateBatch = useUpdateBatch();
   const deleteBatch = useDeleteBatch();
   
   const { data: movements, isLoading: loadingMovements } = useInventoryMovements(
@@ -49,6 +56,8 @@ export function ProductBatchesDialog({
     quantity: 0,
     type: "MANUAL_ADJUSTMENT" as InventoryAdjustmentType,
     reason: "",
+    sellingPrice: 0,
+    minStock: 0,
   });
 
   if (!product) return null;
@@ -67,13 +76,33 @@ export function ProductBatchesDialog({
   const handleAdjustSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedBatch) return;
-    adjustBatch.mutate({ id: selectedBatch.id, data: adjustForm }, {
-      onSuccess: () => {
-        toast.success("Batch adjusted successfully");
-        setView("list");
-      },
-      onError: (error) => toast.error(normalizeApiError(error).message),
-    });
+    if (adjustForm.quantity !== 0 && adjustForm.reason.trim().length < 3) {
+      toast.error("A reason is required when stock quantity changes.");
+      return;
+    }
+    try {
+      await updateBatch.mutateAsync({
+        id: selectedBatch.id,
+        data: {
+          sellingPrice: adjustForm.sellingPrice,
+          minStock: adjustForm.minStock,
+        },
+      });
+      if (adjustForm.quantity !== 0) {
+        await adjustBatch.mutateAsync({
+          id: selectedBatch.id,
+          data: {
+            quantity: adjustForm.quantity,
+            type: adjustForm.type,
+            reason: adjustForm.reason.trim(),
+          },
+        });
+      }
+      toast.success("Batch updated successfully");
+      setView("list");
+    } catch (error) {
+      toast.error(normalizeApiError(error).message);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -111,13 +140,14 @@ export function ProductBatchesDialog({
                   <TH>Expiry</TH>
                   <TH>Available</TH>
                   <TH>Reserved</TH>
+                  <TH>POS price</TH>
                   <TH>Status</TH>
                   <TH className="text-right">Actions</TH>
                 </TR>
               </THead>
               <TBody>
                 {product.batches?.length === 0 && (
-                  <TR><TD colSpan={6} className="text-center py-4">No batches found.</TD></TR>
+                  <TR><TD colSpan={7} className="text-center py-4">No batches found.</TD></TR>
                 )}
                 {product.batches?.map((b) => (
                   <TR key={b.id}>
@@ -125,13 +155,28 @@ export function ProductBatchesDialog({
                     <TD>{new Date(b.expiryDate).toLocaleDateString()}</TD>
                     <TD>{b.availableQuantity}</TD>
                     <TD>{b.reservedQuantity}</TD>
+                    <TD>{b.sellingPrice === undefined ? "Not set" : Number(b.sellingPrice).toFixed(2)}</TD>
                     <TD>
                       <Badge variant={b.status === 'expired' ? 'danger' : b.status === 'near_expiry' ? 'warning' : 'success'} dot>
                         {b.status.replace("_", " ")}
                       </Badge>
                     </TD>
                     <TD className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => { setSelectedBatch(b); setView("adjust"); }}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setSelectedBatch(b);
+                          setAdjustForm({
+                            quantity: 0,
+                            type: "MANUAL_ADJUSTMENT",
+                            reason: "",
+                            sellingPrice: b.sellingPrice ?? 0,
+                            minStock: b.minStock,
+                          });
+                          setView("adjust");
+                        }}
+                      >
                         <Edit2 className="size-4 text-muted-foreground" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(b.id)}>
@@ -148,6 +193,27 @@ export function ProductBatchesDialog({
         {view === "add" && (
           <form onSubmit={handleAddSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">POS Selling Price</label>
+                <Input
+                  required
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={adjustForm.sellingPrice}
+                  onChange={e => setAdjustForm({...adjustForm, sellingPrice: Number(e.target.value) || 0})}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Low Stock Threshold</label>
+                <Input
+                  required
+                  type="number"
+                  min="0"
+                  value={adjustForm.minStock}
+                  onChange={e => setAdjustForm({...adjustForm, minStock: Number.parseInt(e.target.value, 10) || 0})}
+                />
+              </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Batch Number</label>
                 <Input required value={addForm.batchNumber} onChange={e => setAddForm({...addForm, batchNumber: e.target.value})} />
@@ -218,9 +284,9 @@ export function ProductBatchesDialog({
             </div>
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => setView("list")}>Cancel</Button>
-              <Button type="submit" disabled={adjustBatch.isPending}>
-                {adjustBatch.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
-                Apply Adjustment
+              <Button type="submit" disabled={adjustBatch.isPending || updateBatch.isPending}>
+                {(adjustBatch.isPending || updateBatch.isPending) && <Loader2 className="mr-2 size-4 animate-spin" />}
+                Save Batch
               </Button>
             </div>
           </form>

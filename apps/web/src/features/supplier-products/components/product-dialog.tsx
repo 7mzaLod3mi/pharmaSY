@@ -61,7 +61,13 @@ export function ProductDialog({ isOpen, onOpenChange, product }: ProductDialogPr
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.productId || !formData.price || !formData.stock) {
+    if (
+      !formData.productId ||
+      !formData.price ||
+      !formData.stock ||
+      !formData.batchNumber.trim() ||
+      !formData.expiryDate
+    ) {
       toast.error("Please fill all required fields");
       return;
     }
@@ -93,8 +99,8 @@ export function ProductDialog({ isOpen, onOpenChange, product }: ProductDialogPr
         price: Number(formData.price),
         stock: Number(formData.stock),
         minOrder: Number(formData.minOrder),
-        expiryDate: formData.expiryDate || undefined,
-        batchNumber: formData.batchNumber.trim() || undefined,
+        expiryDate: formData.expiryDate,
+        batchNumber: formData.batchNumber.trim(),
         notes: formData.notes.trim() || undefined,
         isAvailable: formData.isAvailable,
         quantityDiscounts,
@@ -183,6 +189,7 @@ export function ProductDialog({ isOpen, onOpenChange, product }: ProductDialogPr
                 </label>
                 <Input
                   id="batchNumber"
+                  required
                   value={formData.batchNumber}
                   onChange={(event) =>
                     setFormData({ ...formData, batchNumber: event.target.value })
@@ -196,6 +203,7 @@ export function ProductDialog({ isOpen, onOpenChange, product }: ProductDialogPr
                 <Input
                   id="expiryDate"
                   type="date"
+                  required
                   value={formData.expiryDate}
                   onChange={(event) =>
                     setFormData({ ...formData, expiryDate: event.target.value })

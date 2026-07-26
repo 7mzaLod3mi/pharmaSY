@@ -42,3 +42,11 @@ export function useCancelOrder() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ordersQueryKeys.all }),
   });
 }
+
+export function useConfirmOrderDelivery() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => ordersRepository.confirmDelivery(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ordersQueryKeys.all }),
+  });
+}

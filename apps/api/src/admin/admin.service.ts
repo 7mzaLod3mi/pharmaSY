@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { OrgStatus, UserRole, UserStatus } from '@pharmasyn/types';
+import { OrgStatus, Prisma, UserRole, UserStatus } from '@prisma/client';
 
 export type OrgType = 'pharmacy' | 'supplier';
 
@@ -51,7 +51,14 @@ export class AdminService {
         where: { status: OrgStatus.PENDING },
         include: {
           user: {
-            select: { id: true, email: true, firstName: true, lastName: true, phone: true, createdAt: true },
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              createdAt: true,
+            },
           },
         },
         skip,
@@ -70,7 +77,14 @@ export class AdminService {
         where: { status: OrgStatus.PENDING },
         include: {
           user: {
-            select: { id: true, email: true, firstName: true, lastName: true, phone: true, createdAt: true },
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              createdAt: true,
+            },
           },
         },
         skip,
@@ -94,7 +108,9 @@ export class AdminService {
       throw new BadRequestException(`Pharmacy is already ${pharmacy.status}`);
     }
     if (!pharmacy.user.emailVerifiedAt) {
-      throw new BadRequestException('Pharmacy owner email must be verified first');
+      throw new BadRequestException(
+        'Pharmacy owner email must be verified first',
+      );
     }
 
     const [updatedPharmacy] = await this.prisma.$transaction([
@@ -178,7 +194,9 @@ export class AdminService {
       throw new BadRequestException(`Supplier is already ${supplier.status}`);
     }
     if (!supplier.user.emailVerifiedAt) {
-      throw new BadRequestException('Supplier owner email must be verified first');
+      throw new BadRequestException(
+        'Supplier owner email must be verified first',
+      );
     }
 
     const [updatedSupplier] = await this.prisma.$transaction([
@@ -254,19 +272,39 @@ export class AdminService {
   // ─── All Users (for admin management) ─────────────────────────────────────
 
   async getAllUsers(page = 1, limit = 20, role?: string, status?: string) {
+    page = Math.max(1, Math.trunc(page) || 1);
+    limit = Math.min(100, Math.max(1, Math.trunc(limit) || 20));
     const skip = (page - 1) * limit;
-    const where: any = { deletedAt: null };
-    if (role) where.role = role;
-    if (status) where.status = status;
+    if (role && !Object.values(UserRole).includes(role as UserRole)) {
+      throw new BadRequestException('Invalid user role');
+    }
+    if (status && !Object.values(UserStatus).includes(status as UserStatus)) {
+      throw new BadRequestException('Invalid user status');
+    }
+    const where: Prisma.UserWhereInput = {
+      deletedAt: null,
+      ...(role ? { role: role as UserRole } : {}),
+      ...(status ? { status: status as UserStatus } : {}),
+    };
 
     const [data, total] = await Promise.all([
       this.prisma.user.findMany({
         where,
         select: {
-          id: true, email: true, firstName: true, lastName: true,
-          phone: true, role: true, status: true, createdAt: true,
-          pharmacy: { select: { id: true, name: true, status: true, city: true } },
-          supplier: { select: { id: true, name: true, status: true, city: true } },
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          role: true,
+          status: true,
+          createdAt: true,
+          pharmacy: {
+            select: { id: true, name: true, status: true, city: true },
+          },
+          supplier: {
+            select: { id: true, name: true, status: true, city: true },
+          },
         },
         skip,
         take: limit,
@@ -278,16 +316,41 @@ export class AdminService {
     return { data, total, page, limit };
   }
 
-  async suspendUser(userId: string) {
+  async suspendUser(userId: string, adminId: string) {
+    if (userId === adminId) {
+      throw new BadRequestException(
+        'Administrators cannot suspend their own account',
+      );
+    }
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
-    return this.prisma.user.update({
-      where: { id: userId },
-      data: { status: UserStatus.SUSPENDED },
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id: userId },
+        data: { status: UserStatus.SUSPENDED },
+      });
+      await tx.refreshToken.updateMany({
+        where: { userId, isRevoked: false },
+        data: { isRevoked: true },
+      });
+      await tx.auditLog.create({
+        data: {
+          entityType: 'User',
+          entityId: userId,
+          action: 'SUSPEND',
+          userId: adminId,
+          userRole: UserRole.ADMIN,
+          newValues: {
+            previousStatus: user.status,
+            status: UserStatus.SUSPENDED,
+          },
+        },
+      });
+      return updated;
     });
   }
 
-  async activateUser(userId: string) {
+  async activateUser(userId: string, adminId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -298,7 +361,9 @@ export class AdminService {
     if (!user) throw new NotFoundException('User not found');
 
     if (!user.emailVerifiedAt) {
-      throw new BadRequestException('Email must be verified before account activation');
+      throw new BadRequestException(
+        'Email must be verified before account activation',
+      );
     }
 
     const organization =
@@ -312,9 +377,25 @@ export class AdminService {
       );
     }
 
-    return this.prisma.user.update({
-      where: { id: userId },
-      data: { status: UserStatus.ACTIVE },
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id: userId },
+        data: { status: UserStatus.ACTIVE },
+      });
+      await tx.auditLog.create({
+        data: {
+          entityType: 'User',
+          entityId: userId,
+          action: 'ACTIVATE',
+          userId: adminId,
+          userRole: UserRole.ADMIN,
+          newValues: {
+            previousStatus: user.status,
+            status: UserStatus.ACTIVE,
+          },
+        },
+      });
+      return updated;
     });
   }
 }

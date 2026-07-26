@@ -12,7 +12,7 @@ interface LoaderState {
 let completionTimeoutId: NodeJS.Timeout | null = null;
 let failureTimeoutId: NodeJS.Timeout | null = null;
 
-const MIN_DURATION = 1000;
+const MIN_DURATION = 0;
 const FAILURE_DURATION = 15000;
 
 export const useLoaderStore = create<LoaderState>((set, get) => ({

@@ -1,7 +1,10 @@
 import {
-  Injectable, NotFoundException, ConflictException,
+  Injectable,
+  NotFoundException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 import { ProductStatus } from '@pharmasyn/types';
 
@@ -54,8 +57,8 @@ export class ProductsService {
     const limit = Math.min(100, Math.max(1, query.limit || 20));
     const skip = (page - 1) * limit;
 
-    const where: any = { deletedAt: null };
-    
+    const where: Prisma.ProductWhereInput = { deletedAt: null };
+
     // Only admins can see non-active products in general search (if they choose to)
     // Actually, force ACTIVE for non-admins
     if (userRole !== 'ADMIN') {
@@ -79,8 +82,12 @@ export class ProductsService {
       this.prisma.product.findMany({
         where,
         include: {
-          category: { select: { id: true, nameAr: true, nameEn: true, slug: true } },
-          manufacturer: { select: { id: true, name: true, country: true, logoUrl: true } },
+          category: {
+            select: { id: true, nameAr: true, nameEn: true, slug: true },
+          },
+          manufacturer: {
+            select: { id: true, name: true, country: true, logoUrl: true },
+          },
           _count: { select: { supplierProducts: true } },
         },
         skip,
@@ -113,7 +120,13 @@ export class ProductsService {
           where: { isAvailable: true, supplier: { status: 'APPROVED' } },
           include: {
             supplier: {
-              select: { id: true, name: true, city: true, phone: true, logoUrl: true },
+              select: {
+                id: true,
+                name: true,
+                city: true,
+                phone: true,
+                logoUrl: true,
+              },
             },
           },
           orderBy: { price: 'asc' },
@@ -132,13 +145,16 @@ export class ProductsService {
         manufacturer: { select: { id: true, name: true } },
       },
     });
-    if (!product) throw new NotFoundException('Product not found for barcode: ' + barcode);
+    if (!product)
+      throw new NotFoundException('Product not found for barcode: ' + barcode);
     return product;
   }
 
   async create(dto: CreateProductDto, userId: string) {
     if (dto.barcode) {
-      const existing = await this.prisma.product.findUnique({ where: { barcode: dto.barcode } });
+      const existing = await this.prisma.product.findUnique({
+        where: { barcode: dto.barcode },
+      });
       if (existing) throw new ConflictException('Barcode already exists');
     }
     return this.prisma.product.create({
@@ -146,7 +162,7 @@ export class ProductsService {
         ...dto,
         createdBy: userId,
         updatedBy: userId,
-      }
+      },
     });
   }
 
@@ -163,7 +179,7 @@ export class ProductsService {
       data: {
         ...dto,
         updatedBy: userId,
-        version: { increment: 1 }
+        version: { increment: 1 },
       },
     });
   }
@@ -175,7 +191,7 @@ export class ProductsService {
       data: {
         status: 'ARCHIVED',
         updatedBy: userId,
-        version: { increment: 1 }
+        version: { increment: 1 },
       },
     });
   }

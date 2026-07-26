@@ -93,8 +93,8 @@ import { PosModule } from './pos/pos.module';
     ScheduleModule.forRoot(),
 
     // ─── Feature Modules ─────────────────────────────────────────────────────
-    AuthModule,     // Phase 2
-    AdminModule,    // Phase 3
+    AuthModule, // Phase 2
+    AdminModule, // Phase 3
     UsersModule,
     PharmaciesModule,
     SuppliersModule,
@@ -144,7 +144,7 @@ import { PosModule } from './pos/pos.module';
     {
       provide: 'APP_FILTER',
       useClass: GlobalExceptionFilter,
-    }
+    },
   ],
 })
 export class AppModule {}

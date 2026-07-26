@@ -1,4 +1,12 @@
-import { Controller, Get, Patch, Delete, Param, Query, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Delete,
+  Param,
+  Query,
+  Body,
+} from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
@@ -47,12 +55,18 @@ export class NotificationsController {
       todayCount,
       thisWeekCount,
       groupByCategory,
-      groupByPriority
+      groupByPriority,
     ] = await Promise.all([
       this.prisma.notification.count({ where: baseWhere }),
-      this.prisma.notification.count({ where: { ...baseWhere, isRead: false } }),
-      this.prisma.notification.count({ where: { ...baseWhere, createdAt: { gte: today } } }),
-      this.prisma.notification.count({ where: { ...baseWhere, createdAt: { gte: thisWeek } } }),
+      this.prisma.notification.count({
+        where: { ...baseWhere, isRead: false },
+      }),
+      this.prisma.notification.count({
+        where: { ...baseWhere, createdAt: { gte: today } },
+      }),
+      this.prisma.notification.count({
+        where: { ...baseWhere, createdAt: { gte: thisWeek } },
+      }),
       this.prisma.notification.groupBy({
         by: ['category'],
         where: baseWhere,
@@ -70,8 +84,14 @@ export class NotificationsController {
       unread,
       today: todayCount,
       thisWeek: thisWeekCount,
-      byCategory: groupByCategory.reduce((acc, curr) => ({ ...acc, [curr.category]: curr._count }), {}),
-      byPriority: groupByPriority.reduce((acc, curr) => ({ ...acc, [curr.priority]: curr._count }), {}),
+      byCategory: groupByCategory.reduce(
+        (acc, curr) => ({ ...acc, [curr.category]: curr._count }),
+        {},
+      ),
+      byPriority: groupByPriority.reduce(
+        (acc, curr) => ({ ...acc, [curr.priority]: curr._count }),
+        {},
+      ),
     };
   }
 
@@ -94,18 +114,12 @@ export class NotificationsController {
   }
 
   @Patch(':id/read')
-  markAsRead(
-    @CurrentUser() user: JwtPayload,
-    @Param('id') id: string,
-  ) {
+  markAsRead(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
     return this.notificationsService.markAsRead(user.sub, id, user.role);
   }
 
   @Delete(':id')
-  delete(
-    @CurrentUser() user: JwtPayload,
-    @Param('id') id: string,
-  ) {
+  delete(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
     return this.notificationsService.delete(user.sub, id, user.role);
   }
 }

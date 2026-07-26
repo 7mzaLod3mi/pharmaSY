@@ -8,6 +8,7 @@ import type {
   CreateInventoryBatchInput,
   ExpiryAlert,
   LowStockAlert,
+  UpdateInventoryBatchInput,
 } from "../api/inventory.types";
 
 export function useInventoryOverview() {
@@ -59,6 +60,21 @@ export function useAdjustBatch() {
       data: AdjustInventoryBatchInput;
     }) => inventoryRepository.adjustBatch(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: inventoryQueryKeys.all }),
+  });
+}
+
+export function useUpdateBatch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: UpdateInventoryBatchInput;
+    }) => inventoryRepository.updateBatch(id, data),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: inventoryQueryKeys.all }),
   });
 }
 

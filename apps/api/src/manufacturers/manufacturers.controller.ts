@@ -1,38 +1,57 @@
 import {
-  Controller, Get, Post, Patch, Delete,
-  Param, Body, Query, HttpCode, HttpStatus,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  Query,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import {
-  IsString, IsOptional, IsBoolean, MinLength,
-} from 'class-validator';
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
+import { IsString, IsOptional, IsBoolean, MinLength } from 'class-validator';
 import { ManufacturersService } from './manufacturers.service';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { UserRole } from '@pharmasyn/types';
 
 export class CreateManufacturerDto {
-  @IsString() @MinLength(2)
+  @IsString()
+  @MinLength(2)
   name: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   country?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   logoUrl?: string;
 }
 
 export class UpdateManufacturerDto {
-  @IsOptional() @IsString() @MinLength(2)
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
   name?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   country?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   logoUrl?: string;
 
-  @IsOptional() @IsBoolean()
+  @IsOptional()
+  @IsBoolean()
   isActive?: boolean;
 }
 
@@ -50,7 +69,10 @@ export class ManufacturersController {
     @Query('search') search?: string,
     @Query('includeInactive') includeInactive?: string,
   ) {
-    return this.manufacturersService.findAll(search, includeInactive === 'true');
+    return this.manufacturersService.findAll(
+      search,
+      includeInactive === 'true',
+    );
   }
 
   @Public()

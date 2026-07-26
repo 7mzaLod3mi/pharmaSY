@@ -27,7 +27,12 @@ import { normalizeApiError } from "@/lib/http-client";
 export default function SupplierImportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [selectedImportId, setSelectedImportId] = useState("");
-  const { data: history, isLoading } = useSupplierImportHistory();
+  const {
+    data: history,
+    isLoading,
+    error: historyError,
+    refetch: refetchHistory,
+  } = useSupplierImportHistory();
   const selectedImport = useSupplierImportStatus(selectedImportId);
   const upload = useUploadSupplierExcel();
 
@@ -64,6 +69,12 @@ export default function SupplierImportPage() {
             <CardDescription>Supported formats: .xlsx, .xls</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs leading-5 text-muted-foreground">
+              Required columns: <strong>barcode</strong>, <strong>price</strong>,{" "}
+              <strong>batchNumber</strong>, and <strong>expiryDate</strong>.
+              Optional columns: stock and minOrder. Expiry dates must be in the
+              future.
+            </div>
             <div className="flex w-full items-center justify-center">
               <label
                 htmlFor="dropzone-file"
@@ -119,6 +130,22 @@ export default function SupplierImportPage() {
                   <TR>
                     <TD colSpan={5} className="text-center py-6 text-muted-foreground">
                       Loading history...
+                    </TD>
+                  </TR>
+                ) : historyError ? (
+                  <TR>
+                    <TD colSpan={5} className="py-8 text-center">
+                      <p className="text-sm text-danger-600">
+                        {normalizeApiError(historyError).message}
+                      </p>
+                      <Button
+                        className="mt-3"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => void refetchHistory()}
+                      >
+                        Retry
+                      </Button>
                     </TD>
                   </TR>
                 ) : history?.length === 0 ? (
@@ -205,6 +232,10 @@ export default function SupplierImportPage() {
                       </p>
                     )}
                   </div>
+                ) : selectedImport.error ? (
+                  <p className="text-sm text-danger-600">
+                    {normalizeApiError(selectedImport.error).message}
+                  </p>
                 ) : null}
               </div>
             ) : null}

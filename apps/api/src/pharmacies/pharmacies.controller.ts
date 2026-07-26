@@ -1,4 +1,12 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PharmaciesService } from './pharmacies.service';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -33,16 +41,24 @@ export class CreatePharmacyDto {
 }
 
 export class UpdatePharmacyDto {
-  @IsOptional() @IsString() @MinLength(2)
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
   name?: string;
 
-  @IsOptional() @IsString() @MinLength(5)
+  @IsOptional()
+  @IsString()
+  @MinLength(5)
   address?: string;
 
-  @IsOptional() @IsString() @MinLength(2)
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
   city?: string;
 
-  @IsOptional() @IsString() @MinLength(8)
+  @IsOptional()
+  @IsString()
+  @MinLength(8)
   phone?: string;
 }
 
@@ -58,7 +74,10 @@ export class PharmaciesController {
   @RequirePermissions(Permissions.PROFILE_MANAGE)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create pharmacy profile' })
-  async createProfile(@CurrentUser() user: JwtPayload, @Body() dto: CreatePharmacyDto) {
+  async createProfile(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: CreatePharmacyDto,
+  ) {
     return this.pharmaciesService.createProfile(user.sub, dto);
   }
 

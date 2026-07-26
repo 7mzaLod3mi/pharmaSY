@@ -1,5 +1,9 @@
 # PharmaSY Backend-to-Frontend Gap Report
 
+> **تنبيه:** هذا الملف يوثّق حالة تدقيق أقدم. التقرير الحالي المعتمد بعد
+> جولة الاستقرار والتكامل بتاريخ 26 يوليو 2026 هو
+> `docs/REPOSITORY_WIDE_AUDIT_2026-07-26_AR.md`.
+
 **Audit date:** 2026-07-24  
 **Official frontend:** `apps/web` (`@pharmasyn/web`)  
 **API prefix:** `/api/v1`

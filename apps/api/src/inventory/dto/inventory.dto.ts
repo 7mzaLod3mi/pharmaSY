@@ -50,7 +50,7 @@ export class CreateInventoryBatchDto {
   @IsOptional()
   @IsString()
   location?: string;
-  
+
   @IsOptional()
   @IsString()
   notes?: string;
@@ -72,7 +72,27 @@ export class AdjustStockDto {
   @IsOptional()
   @IsString()
   reason?: string;
-  
+
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
+export class UpdateInventoryBatchDto {
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  sellingPrice?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  minStock?: number;
+
+  @IsOptional()
+  @IsString()
+  location?: string;
+
   @IsOptional()
   @IsString()
   notes?: string;

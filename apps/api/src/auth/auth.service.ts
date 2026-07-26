@@ -31,6 +31,7 @@ import {
 } from '@pharmasyn/types';
 import { resolveAccountVerificationState } from './account-state';
 import { EMAIL_QUEUE } from '../common/queue/email-queue.constants';
+import { parseTokenDuration } from './token-duration';
 
 @Injectable()
 export class AuthService {
@@ -45,17 +46,21 @@ export class AuthService {
 
   async register(dto: RegisterDto) {
     if (dto.role === UserRole.ADMIN) {
-      throw new BadRequestException('Administrator accounts cannot be self-registered');
+      throw new BadRequestException(
+        'Administrator accounts cannot be self-registered',
+      );
     }
     this.assertEmailDeliveryConfigured();
 
     const email = dto.email.trim().toLowerCase();
-    const existingUser = await this.prisma.user.findUnique({ where: { email } });
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+    });
     if (existingUser) throw new ConflictException('Email already in use');
 
     const [passwordHash, otp] = await Promise.all([
       bcrypt.hash(dto.password, 12),
-      this.createOtp(),
+      Promise.resolve(this.createOtp()),
     ]);
 
     const otpHash = await bcrypt.hash(otp, 10);
@@ -81,7 +86,17 @@ export class AuthService {
       return created;
     });
 
-    await this.enqueueVerificationEmail(email, otp);
+    try {
+      await this.enqueueVerificationEmail(email, otp);
+    } catch {
+      // Registration is not usable without the mandatory first verification
+      // message. Cascading relations remove the pending verification record.
+      await this.prisma.user.delete({ where: { id: user.id } });
+      throw new ServiceUnavailableException({
+        code: 'EMAIL_DELIVERY_UNAVAILABLE',
+        message: 'Unable to queue the verification email. Please try again.',
+      });
+    }
 
     return {
       message: 'Registration successful. Please verify your email.',
@@ -118,41 +133,64 @@ export class AuthService {
   }
 
   async resendVerification(dto: ResendOtpDto) {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
     if (!user || user.deletedAt || user.emailVerifiedAt) {
-      return { message: 'If verification is required, a new code has been sent.' };
+      return {
+        message: 'If verification is required, a new code has been sent.',
+      };
     }
     this.assertEmailDeliveryConfigured();
 
-    const otp = await this.createOtp();
+    const otp = this.createOtp();
     const otpHash = await bcrypt.hash(otp, 10);
     const now = new Date();
 
-    await this.prisma.$transaction([
-      this.prisma.emailVerification.updateMany({
-        where: { userId: user.id, usedAt: null },
-        data: { usedAt: now },
-      }),
-      this.prisma.emailVerification.create({
-        data: {
-          userId: user.id,
-          email: user.email,
-          otp: otpHash,
-          expiresAt: new Date(now.getTime() + 10 * 60 * 1000),
-        },
-      }),
-    ]);
+    const verification = await this.prisma.emailVerification.create({
+      data: {
+        userId: user.id,
+        email: user.email,
+        otp: otpHash,
+        expiresAt: new Date(now.getTime() + 10 * 60 * 1000),
+      },
+    });
 
-    await this.enqueueVerificationEmail(user.email, otp);
-    return { message: 'If verification is required, a new code has been sent.' };
+    try {
+      await this.enqueueVerificationEmail(user.email, otp);
+    } catch {
+      // Keep the previous code valid if a replacement cannot be queued.
+      await this.prisma.emailVerification.delete({
+        where: { id: verification.id },
+      });
+      throw new ServiceUnavailableException({
+        code: 'EMAIL_DELIVERY_UNAVAILABLE',
+        message: 'Unable to queue the verification email. Please try again.',
+      });
+    }
+
+    await this.prisma.emailVerification.updateMany({
+      where: {
+        userId: user.id,
+        id: { not: verification.id },
+        usedAt: null,
+      },
+      data: { usedAt: now },
+    });
+    return {
+      message: 'If verification is required, a new code has been sent.',
+    };
   }
 
   async forgotPassword(dto: ForgotPasswordDto) {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
     const genericResponse = {
       message: 'If the account exists, a password reset link has been sent.',
     };
-    if (!user || user.deletedAt || !user.emailVerifiedAt) return genericResponse;
+    if (!user || user.deletedAt || !user.emailVerifiedAt)
+      return genericResponse;
     this.assertEmailDeliveryConfigured();
 
     const rawToken = randomBytes(32).toString('hex');
@@ -163,13 +201,28 @@ export class AuthService {
       data: { userId: user.id, token: tokenHash, expiresAt },
     });
 
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
+    const frontendUrl = this.configService.get<string>(
+      'FRONTEND_URL',
+      'http://localhost:3000',
+    );
     const resetUrl = `${frontendUrl}/reset-password?token=${encodeURIComponent(rawToken)}`;
-    await this.emailQueue.add('send-email', {
-      to: user.email,
-      subject: 'PharmaSY password reset',
-      html: `<div dir="auto"><h2>إعادة تعيين كلمة المرور</h2><p><a href="${resetUrl}">إعادة تعيين كلمة المرور</a></p><p>This link expires in 30 minutes.</p></div>`,
-    });
+    try {
+      await this.emailQueue.add('send-email', {
+        to: user.email,
+        subject: 'PharmaSY password reset',
+        html: `<div dir="auto"><h2>إعادة تعيين كلمة المرور</h2><p><a href="${resetUrl}">إعادة تعيين كلمة المرور</a></p><p>This link expires in 30 minutes.</p></div>`,
+      });
+    } catch (error) {
+      await this.prisma.passwordReset.delete({ where: { token: tokenHash } });
+      this.logger.error(
+        `Unable to enqueue password reset email for ${user.email}`,
+        error,
+      );
+      throw new ServiceUnavailableException({
+        code: 'EMAIL_DELIVERY_UNAVAILABLE',
+        message: 'Unable to queue the password reset email. Please try again.',
+      });
+    }
 
     return genericResponse;
   }
@@ -203,7 +256,9 @@ export class AuthService {
     return { message: 'Password reset successfully' };
   }
 
-  async login(dto: LoginDto): Promise<AuthTokens & { user: Record<string, unknown> }> {
+  async login(
+    dto: LoginDto,
+  ): Promise<AuthTokens & { user: Record<string, unknown> }> {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email.trim().toLowerCase() },
       include: {
@@ -216,17 +271,24 @@ export class AuthService {
       },
     });
 
-    if (!user || user.deletedAt || !(await bcrypt.compare(dto.password, user.passwordHash))) {
+    if (
+      !user ||
+      user.deletedAt ||
+      !(await bcrypt.compare(dto.password, user.passwordHash))
+    ) {
       throw new UnauthorizedException({
         code: 'INVALID_CREDENTIALS',
         message: 'Invalid email or password',
       });
     }
 
-    const organization = user.role === UserRole.PHARMACY ? user.pharmacy : user.supplier;
+    const role = user.role as UserRole;
+    const status = user.status as UserStatus;
+    const organization =
+      role === UserRole.PHARMACY ? user.pharmacy : user.supplier;
     const accountState = resolveAccountVerificationState({
-      role: user.role as UserRole,
-      status: user.status as UserStatus,
+      role,
+      status,
       emailVerifiedAt: user.emailVerifiedAt,
       organization: organization
         ? { status: organization.status as OrgStatus }
@@ -236,7 +298,7 @@ export class AuthService {
     this.assertLoginAllowed(
       accountState,
       organization?.rejectionNote ?? undefined,
-      user.role as UserRole,
+      role,
     );
 
     const orgId = organization?.id;
@@ -244,8 +306,8 @@ export class AuthService {
     const tokens = await this.generateTokens({
       sub: user.id,
       email: user.email,
-      role: user.role as UserRole,
-      status: user.status as UserStatus,
+      role,
+      status,
       orgId,
       orgStatus,
     });
@@ -265,20 +327,29 @@ export class AuthService {
       }),
     ]);
 
-    const { passwordHash: _passwordHash, pharmacy, supplier, ...safeUser } = user;
     return {
       accessToken: tokens.accessToken,
-      expiresIn: 15 * 60,
+      expiresIn: this.getAccessTokenExpirySeconds(),
       refreshToken: tokens.refreshToken,
       user: {
-        ...safeUser,
+        id: user.id,
+        email: user.email,
+        phone: user.phone,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        avatar: user.avatar,
+        emailVerifiedAt: user.emailVerifiedAt,
+        status,
+        role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
         orgId,
         orgName: organization?.name,
         orgStatus,
         accountState,
         organizationRejectionReason: organization?.rejectionNote ?? undefined,
         requiresOrganizationApproval:
-          user.role !== UserRole.ADMIN &&
+          role !== UserRole.ADMIN &&
           accountState !== AccountVerificationState.ACTIVE,
       },
     };
@@ -307,10 +378,13 @@ export class AuthService {
 
     if (!user) throw new UnauthorizedException('Access denied');
 
-    const organization = user.role === UserRole.PHARMACY ? user.pharmacy : user.supplier;
+    const role = user.role as UserRole;
+    const status = user.status as UserStatus;
+    const organization =
+      role === UserRole.PHARMACY ? user.pharmacy : user.supplier;
     const accountState = resolveAccountVerificationState({
-      role: user.role as UserRole,
-      status: user.status as UserStatus,
+      role,
+      status,
       emailVerifiedAt: user.emailVerifiedAt,
       organization: organization
         ? { status: organization.status as OrgStatus }
@@ -319,35 +393,46 @@ export class AuthService {
     this.assertRefreshAllowed(accountState);
 
     const activeTokens = await this.prisma.refreshToken.findMany({
-      where: { userId: user.id, isRevoked: false, expiresAt: { gt: new Date() } },
+      where: {
+        userId: user.id,
+        isRevoked: false,
+        expiresAt: { gt: new Date() },
+      },
     });
-    const matched = await this.findMatchingRefreshToken(activeTokens, refreshToken);
+    const matched = await this.findMatchingRefreshToken(
+      activeTokens,
+      refreshToken,
+    );
     if (!matched) throw new UnauthorizedException('Access denied');
 
     const tokens = await this.generateTokens({
       sub: user.id,
       email: user.email,
-      role: user.role as UserRole,
-      status: user.status as UserStatus,
+      role,
+      status,
       orgId: organization?.id,
       orgStatus: organization?.status as OrgStatus | undefined,
     });
 
-    await this.prisma.$transaction([
-      this.prisma.refreshToken.update({
-        where: { id: matched.id },
+    const nextRefreshTokenHash = await bcrypt.hash(tokens.refreshToken, 12);
+    await this.prisma.$transaction(async (tx) => {
+      const revoked = await tx.refreshToken.updateMany({
+        where: { id: matched.id, isRevoked: false },
         data: { isRevoked: true },
-      }),
-      this.prisma.refreshToken.create({
+      });
+      if (revoked.count !== 1) {
+        throw new UnauthorizedException('Refresh token has already been used');
+      }
+      await tx.refreshToken.create({
         data: {
           userId: user.id,
-          token: await bcrypt.hash(tokens.refreshToken, 12),
+          token: nextRefreshTokenHash,
           expiresAt: this.getRefreshTokenExpiry(),
         },
-      }),
-    ]);
+      });
+    });
 
-    return { ...tokens, expiresIn: 15 * 60 };
+    return { ...tokens, expiresIn: this.getAccessTokenExpirySeconds() };
   }
 
   rejectMissingRefreshToken(): never {
@@ -374,10 +459,12 @@ export class AuthService {
 
   private getRefreshTokenExpiry(): Date {
     const expiry = this.configService.get<string>('JWT_REFRESH_EXPIRY', '7d');
-    const days = Number.parseInt(expiry.replace('d', ''), 10) || 7;
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + days);
-    return expiresAt;
+    return new Date(Date.now() + parseTokenDuration(expiry, '7d'));
+  }
+
+  private getAccessTokenExpirySeconds(): number {
+    const expiry = this.configService.get<string>('JWT_ACCESS_EXPIRY', '15m');
+    return Math.floor(parseTokenDuration(expiry, '15m') / 1_000);
   }
 
   private async generateTokens(payload: JwtPayload) {
@@ -388,13 +475,16 @@ export class AuthService {
           'JWT_REFRESH_SECRET',
           'pharmasyn-dev-refresh-secret',
         ),
-        expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRY', '7d') as never,
+        expiresIn: this.configService.get<string>(
+          'JWT_REFRESH_EXPIRY',
+          '7d',
+        ) as never,
       }),
     ]);
     return { accessToken, refreshToken };
   }
 
-  private async createOtp(): Promise<string> {
+  private createOtp(): string {
     return randomInt(100000, 1000000).toString();
   }
 
@@ -410,7 +500,10 @@ export class AuthService {
         html: `<div dir="auto"><h2>رمز التحقق من البريد الإلكتروني</h2><p style="font-size:24px;font-weight:bold">${otp}</p><p>This code expires in 10 minutes.</p></div>`,
       });
     } catch (error) {
-      this.logger.error(`Unable to enqueue verification email for ${email}`, error);
+      this.logger.error(
+        `Unable to enqueue verification email for ${email}`,
+        error,
+      );
       throw error;
     }
   }
@@ -452,10 +545,7 @@ export class AuthService {
       },
     };
 
-    if (
-      role === UserRole.ADMIN &&
-      state !== AccountVerificationState.ACTIVE
-    ) {
+    if (role === UserRole.ADMIN && state !== AccountVerificationState.ACTIVE) {
       throw new UnauthorizedException({
         code: 'ACCOUNT_NOT_ACTIVE',
         message: 'Administrator account is not active',

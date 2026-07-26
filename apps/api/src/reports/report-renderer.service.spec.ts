@@ -1,8 +1,4 @@
-import {
-  ReportExportFormat,
-  ReportLocale,
-  ReportType,
-} from '@prisma/client';
+import { ReportExportFormat, ReportLocale, ReportType } from '@prisma/client';
 import * as XLSX from 'xlsx';
 import { ReportRendererService } from './report-renderer.service';
 import { ReportResult } from './report.types';
@@ -46,10 +42,9 @@ describe('ReportRendererService', () => {
     expect(file.buffer.subarray(0, 2).toString()).toBe('PK');
     const workbook = XLSX.read(file.buffer, { type: 'buffer' });
     expect(workbook.SheetNames).toEqual(['البيانات', 'الملخص']);
-    const rows = XLSX.utils.sheet_to_json(
-      workbook.Sheets['البيانات'],
-      { header: 1 },
-    ) as unknown[][];
+    const rows = XLSX.utils.sheet_to_json(workbook.Sheets['البيانات'], {
+      header: 1,
+    });
     expect(rows[0]).toEqual(['المنتج', 'الإجمالي']);
     expect(rows[1]).toEqual(['باراسيتامول', 1250.5]);
   });
@@ -57,11 +52,7 @@ describe('ReportRendererService', () => {
   it.each([ReportLocale.EN, ReportLocale.AR])(
     'creates a valid %s PDF with the bundled Unicode font',
     async (locale) => {
-      const file = await service.render(
-        report,
-        ReportExportFormat.PDF,
-        locale,
-      );
+      const file = await service.render(report, ReportExportFormat.PDF, locale);
 
       expect(file.contentType).toBe('application/pdf');
       expect(file.buffer.subarray(0, 5).toString()).toBe('%PDF-');

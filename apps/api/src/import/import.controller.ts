@@ -8,13 +8,17 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiConsumes,
+} from '@nestjs/swagger';
 import { ImportService } from './import.service';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '@pharmasyn/types';
 import type { JwtPayload } from '@pharmasyn/types';
-import { PrismaService } from '../prisma/prisma.service';
 import { RequirePermissions } from '../common/decorators/permissions.decorator';
 import { Permissions } from '../common/permissions';
 
@@ -24,10 +28,7 @@ import { Permissions } from '../common/permissions';
 @RequirePermissions(Permissions.IMPORT_MANAGE)
 @Controller({ path: 'import', version: '1' })
 export class ImportController {
-  constructor(
-    private importService: ImportService,
-    private prisma: PrismaService,
-  ) {}
+  constructor(private readonly importService: ImportService) {}
 
   @Post('excel')
   @UseInterceptors(
@@ -46,7 +47,9 @@ export class ImportController {
     }
 
     if (!user.orgId) {
-      throw new BadRequestException('User does not have an associated organization');
+      throw new BadRequestException(
+        'User does not have an associated organization',
+      );
     }
 
     // Must be Excel
@@ -55,7 +58,9 @@ export class ImportController {
       'application/vnd.ms-excel',
     ];
     if (!allowedMimes.includes(file.mimetype)) {
-      throw new BadRequestException('File must be an Excel spreadsheet (.xlsx or .xls)');
+      throw new BadRequestException(
+        'File must be an Excel spreadsheet (.xlsx or .xls)',
+      );
     }
 
     const importRecord = await this.importService.queueImport(file, user.orgId);
@@ -69,16 +74,12 @@ export class ImportController {
   @ApiOperation({ summary: 'Get import history for the current supplier' })
   async getHistory(@CurrentUser() user: JwtPayload) {
     if (!user.orgId) {
-      throw new BadRequestException('User does not have an associated organization');
+      throw new BadRequestException(
+        'User does not have an associated organization',
+      );
     }
 
-    const history = await this.prisma.productImport.findMany({
-      where: { supplierId: user.orgId },
-      orderBy: { createdAt: 'desc' },
-      take: 20,
-    });
-
-    return history;
+    return this.importService.getHistory(user.orgId);
   }
 
   @Get(':id')
@@ -88,17 +89,11 @@ export class ImportController {
     @CurrentUser() user: JwtPayload,
   ) {
     if (!user.orgId) {
-      throw new BadRequestException('User does not have an associated organization');
+      throw new BadRequestException(
+        'User does not have an associated organization',
+      );
     }
 
-    const record = await this.prisma.productImport.findUnique({
-      where: { id },
-    });
-
-    if (!record || record.supplierId !== user.orgId) {
-      throw new BadRequestException('Import record not found or access denied');
-    }
-
-    return record;
+    return this.importService.getStatus(id, user.orgId);
   }
 }

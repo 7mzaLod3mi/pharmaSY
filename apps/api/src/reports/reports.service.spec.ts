@@ -17,8 +17,12 @@ describe('ReportsService access and isolation', () => {
   });
 
   it('exposes only the report catalog allowed for the organization role', () => {
-    const pharmacy = service.catalog(UserRole.PHARMACY).map((item) => item.reportType);
-    const supplier = service.catalog(UserRole.SUPPLIER).map((item) => item.reportType);
+    const pharmacy = service
+      .catalog(UserRole.PHARMACY)
+      .map((item) => item.reportType);
+    const supplier = service
+      .catalog(UserRole.SUPPLIER)
+      .map((item) => item.reportType);
 
     expect(pharmacy).toContain(ReportType.PHARMACY_POS_SALES);
     expect(pharmacy).not.toContain(ReportType.SUPPLIER_SALES);
@@ -36,10 +40,7 @@ describe('ReportsService access and isolation', () => {
       ),
     ).toThrow(ForbiddenException);
     expect(() =>
-      service.assertAccess(
-        ReportType.PHARMACY_POS_SALES,
-        UserRole.PHARMACY,
-      ),
+      service.assertAccess(ReportType.PHARMACY_POS_SALES, UserRole.PHARMACY),
     ).toThrow(ForbiddenException);
   });
 

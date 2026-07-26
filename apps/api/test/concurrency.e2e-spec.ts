@@ -1,6 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
-const request = require('supertest');
+import {
+  INestApplication,
+  ValidationPipe,
+  VersioningType,
+} from '@nestjs/common';
+import request from 'supertest';
+import * as bcrypt from 'bcrypt';
 import { AppModule } from './../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { randomUUID } from 'crypto';
@@ -18,7 +23,9 @@ function assertDedicatedTestDatabase() {
   const parsed = new URL(databaseUrl);
   const target = `${parsed.pathname}/${parsed.searchParams.get('schema') ?? ''}`;
   if (!/test/i.test(target)) {
-    throw new Error('Refusing destructive E2E cleanup: database name or schema must contain "test"');
+    throw new Error(
+      'Refusing destructive E2E cleanup: database name or schema must contain "test"',
+    );
   }
 }
 
@@ -27,7 +34,6 @@ describe('Concurrency & Race Conditions (e2e)', () => {
   let prisma: PrismaService;
 
   let pharmacyToken: string;
-  let pharmacyId: string;
   let supplierId: string;
   let productId: string;
   let spId: string;
@@ -37,8 +43,7 @@ describe('Concurrency & Race Conditions (e2e)', () => {
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    })
-      .compile();
+    }).compile();
 
     app = moduleFixture.createNestApplication();
     app.setGlobalPrefix('api');
@@ -79,23 +84,84 @@ describe('Concurrency & Race Conditions (e2e)', () => {
     await prisma.refreshToken.deleteMany();
     await prisma.user.deleteMany();
 
-    const bcrypt = require('bcrypt');
     const passwordHash = await bcrypt.hash('password123', 10);
 
     // 2. Create users and orgs
-    const uAdmin = await prisma.user.create({ data: { email: 'admin_c@test.com', firstName: 'Admin', lastName: 'C', passwordHash, role: 'ADMIN', status: 'ACTIVE', emailVerifiedAt: new Date() } });
-    const uPharm = await prisma.user.create({ data: { email: 'pharmacy_c@test.com', firstName: 'Pharm', lastName: 'C', passwordHash, role: 'PHARMACY', status: 'ACTIVE', emailVerifiedAt: new Date() } });
-    const uSupp = await prisma.user.create({ data: { email: 'supp_c@test.com', firstName: 'Supp', lastName: 'C', passwordHash: 'hash', role: 'SUPPLIER', status: 'ACTIVE', emailVerifiedAt: new Date() } });
+    const uAdmin = await prisma.user.create({
+      data: {
+        email: 'admin_c@test.com',
+        firstName: 'Admin',
+        lastName: 'C',
+        passwordHash,
+        role: 'ADMIN',
+        status: 'ACTIVE',
+        emailVerifiedAt: new Date(),
+      },
+    });
+    const uPharm = await prisma.user.create({
+      data: {
+        email: 'pharmacy_c@test.com',
+        firstName: 'Pharm',
+        lastName: 'C',
+        passwordHash,
+        role: 'PHARMACY',
+        status: 'ACTIVE',
+        emailVerifiedAt: new Date(),
+      },
+    });
+    const uSupp = await prisma.user.create({
+      data: {
+        email: 'supp_c@test.com',
+        firstName: 'Supp',
+        lastName: 'C',
+        passwordHash: 'hash',
+        role: 'SUPPLIER',
+        status: 'ACTIVE',
+        emailVerifiedAt: new Date(),
+      },
+    });
 
-    const pharmacy = await prisma.pharmacy.create({ data: { userId: uPharm.id, name: 'Pharma C', licenseNumber: 'LC_C', address: 'Addr', city: 'City', phone: '123', status: 'APPROVED', approvedAt: new Date(), approvedBy: uAdmin.id } });
-    const supplier = await prisma.supplier.create({ data: { userId: uSupp.id, name: 'Supp C', tradeRegister: 'TR_C', address: 'Addr', city: 'City', phone: '123', status: 'APPROVED', verifiedAt: new Date(), verifiedBy: uAdmin.id } });
+    await prisma.pharmacy.create({
+      data: {
+        userId: uPharm.id,
+        name: 'Pharma C',
+        licenseNumber: 'LC_C',
+        address: 'Addr',
+        city: 'City',
+        phone: '123',
+        status: 'APPROVED',
+        approvedAt: new Date(),
+        approvedBy: uAdmin.id,
+      },
+    });
+    const supplier = await prisma.supplier.create({
+      data: {
+        userId: uSupp.id,
+        name: 'Supp C',
+        tradeRegister: 'TR_C',
+        address: 'Addr',
+        city: 'City',
+        phone: '123',
+        status: 'APPROVED',
+        verifiedAt: new Date(),
+        verifiedBy: uAdmin.id,
+      },
+    });
 
-    pharmacyId = pharmacy.id;
     supplierId = supplier.id;
 
     // 3. Create product
-    const category = await prisma.category.create({ data: { nameAr: 'Cat', nameEn: 'Cat', slug: 'cat_c' } });
-    const product = await prisma.product.create({ data: { tradeNameAr: 'Prod C', tradeNameEn: 'Prod C', categoryId: category.id, unit: 'box' } });
+    const category = await prisma.category.create({
+      data: { nameAr: 'Cat', nameEn: 'Cat', slug: 'cat_c' },
+    });
+    const product = await prisma.product.create({
+      data: {
+        tradeNameAr: 'Prod C',
+        tradeNameEn: 'Prod C',
+        categoryId: category.id,
+        unit: 'box',
+      },
+    });
     productId = product.id;
 
     // 4. Create Supplier Product with EXACTLY 5 stock
@@ -107,11 +173,13 @@ describe('Concurrency & Race Conditions (e2e)', () => {
         stock: 5,
         minOrder: 1,
         isAvailable: true,
-      }
+      },
     });
     spId = sp.id;
 
-    const pharmLogin = await request(app.getHttpServer()).post('/api/v1/auth/login').send({ email: 'pharmacy_c@test.com', password: 'password123' });
+    const pharmLogin = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email: 'pharmacy_c@test.com', password: 'password123' });
     pharmacyToken = pharmLogin.body.data.accessToken;
   });
 
@@ -125,16 +193,20 @@ describe('Concurrency & Race Conditions (e2e)', () => {
       groups: [
         {
           supplierId,
-          items: [{ supplierProductId: spId, quantity: 2, price: 100 }]
-        }
-      ]
+          items: [{ supplierProductId: spId, quantity: 2, price: 100 }],
+        },
+      ],
     };
 
     const requests = Array.from({ length: 5 }).map(() =>
       request(app.getHttpServer())
         .post('/api/v1/orders/checkout')
         .set('Authorization', `Bearer ${pharmacyToken}`)
-        .send({ ...checkoutDto, clientMutationId: randomUUID(), deviceId: 'concurrency-e2e' })
+        .send({
+          ...checkoutDto,
+          clientMutationId: randomUUID(),
+          deviceId: 'concurrency-e2e',
+        }),
     );
 
     const responses = await Promise.all(requests);

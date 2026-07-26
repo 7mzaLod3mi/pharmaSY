@@ -1,10 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
-import {
-  ReportExportStatus,
-  UserRole as PrismaUserRole,
-} from '@prisma/client';
+import { ReportExportStatus } from '@prisma/client';
 import { UserRole } from '@pharmasyn/types';
 import { Job } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
@@ -32,7 +29,8 @@ export class ReportExportProcessor extends WorkerHost {
     const record = await this.prisma.reportExport.findUnique({
       where: { id: job.data.exportId },
     });
-    if (!record) throw new Error(`Report export ${job.data.exportId} not found`);
+    if (!record)
+      throw new Error(`Report export ${job.data.exportId} not found`);
     if (record.status === ReportExportStatus.COMPLETED) return record;
 
     await this.prisma.reportExport.update({
@@ -75,7 +73,11 @@ export class ReportExportProcessor extends WorkerHost {
         data: { progress: 50, rowCount: result.rows.length },
       });
 
-      const file = await this.renderer.render(result, record.format, record.locale);
+      const file = await this.renderer.render(
+        result,
+        record.format,
+        record.locale,
+      );
       const fileName = `${record.reportType.toLowerCase()}_${record.id}.${file.extension}`;
       const storageKey = `private/reports/${record.orgId}/${record.id}/${fileName}`;
       await this.upload.uploadPrivateBuffer(
@@ -114,7 +116,7 @@ export class ReportExportProcessor extends WorkerHost {
             action: 'COMPLETED',
             userId: record.requestedByUserId,
             orgId: record.orgId,
-            userRole: record.orgRole as PrismaUserRole,
+            userRole: record.orgRole,
             newValues: {
               reportType: record.reportType,
               format: record.format,
@@ -129,7 +131,9 @@ export class ReportExportProcessor extends WorkerHost {
       return completed;
     } catch (error) {
       const message =
-        error instanceof Error ? error.message.slice(0, 1000) : 'Unknown export error';
+        error instanceof Error
+          ? error.message.slice(0, 1000)
+          : 'Unknown export error';
       const attempts = job.opts.attempts ?? 1;
       const willRetry = job.attemptsMade + 1 < attempts;
       await this.prisma.reportExport.update({

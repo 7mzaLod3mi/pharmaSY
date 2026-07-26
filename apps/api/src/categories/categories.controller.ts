@@ -1,10 +1,27 @@
 import {
-  Controller, Get, Post, Patch, Delete,
-  Param, Body, Query, HttpCode, HttpStatus,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  Query,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import {
-  IsString, IsOptional, IsNumber, IsBoolean, Min, MinLength,
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsBoolean,
+  MinLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CategoriesService } from './categories.service';
@@ -13,45 +30,63 @@ import { Public } from '../common/decorators/public.decorator';
 import { UserRole } from '@pharmasyn/types';
 
 export class CreateCategoryDto {
-  @IsString() @MinLength(2)
+  @IsString()
+  @MinLength(2)
   nameAr: string;
 
-  @IsString() @MinLength(2)
+  @IsString()
+  @MinLength(2)
   nameEn: string;
 
-  @IsString() @MinLength(2)
+  @IsString()
+  @MinLength(2)
   slug: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   parentId?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   icon?: string;
 
-  @IsOptional() @IsNumber() @Type(() => Number)
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
   sortOrder?: number;
 }
 
 export class UpdateCategoryDto {
-  @IsOptional() @IsString() @MinLength(2)
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
   nameAr?: string;
 
-  @IsOptional() @IsString() @MinLength(2)
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
   nameEn?: string;
 
-  @IsOptional() @IsString() @MinLength(2)
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
   slug?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   parentId?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   icon?: string;
 
-  @IsOptional() @IsNumber() @Type(() => Number)
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
   sortOrder?: number;
 
-  @IsOptional() @IsBoolean()
+  @IsOptional()
+  @IsBoolean()
   isActive?: boolean;
 }
 

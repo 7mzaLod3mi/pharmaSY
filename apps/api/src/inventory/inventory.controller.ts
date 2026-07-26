@@ -1,7 +1,20 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { InventoryService } from './inventory.service';
-import { CreateInventoryBatchDto, AdjustStockDto } from './dto/inventory.dto';
+import {
+  CreateInventoryBatchDto,
+  AdjustStockDto,
+  UpdateInventoryBatchDto,
+} from './dto/inventory.dto';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '@pharmasyn/types';
@@ -19,7 +32,9 @@ export class InventoryController {
 
   @Get()
   @Roles(UserRole.PHARMACY)
-  @ApiOperation({ summary: 'List all inventory batches with pagination & search' })
+  @ApiOperation({
+    summary: 'List all inventory batches with pagination & search',
+  })
   async findAll(
     @CurrentUser() user: JwtPayload,
     @Query('search') search?: string,
@@ -51,8 +66,14 @@ export class InventoryController {
   @Get('alerts/expiry')
   @Roles(UserRole.PHARMACY)
   @ApiOperation({ summary: 'Get near expiry and expired batches' })
-  async getExpiryAlerts(@CurrentUser() user: JwtPayload, @Query('days') days?: string) {
-    return this.inventoryService.getExpiryAlerts(user.orgId!, days ? parseInt(days, 10) : 90);
+  async getExpiryAlerts(
+    @CurrentUser() user: JwtPayload,
+    @Query('days') days?: string,
+  ) {
+    return this.inventoryService.getExpiryAlerts(
+      user.orgId!,
+      days ? parseInt(days, 10) : 90,
+    );
   }
 
   @Get('movements')
@@ -121,14 +142,23 @@ export class InventoryController {
     return this.inventoryService.adjustBatch(user.orgId!, id, user.sub, dto);
   }
 
+  @Patch(':id')
+  @Roles(UserRole.PHARMACY)
+  @RequirePermissions(Permissions.INVENTORY_MANAGE)
+  @ApiOperation({ summary: 'Update pharmacy-owned inventory batch metadata' })
+  async updateBatch(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Body() dto: UpdateInventoryBatchDto,
+  ) {
+    return this.inventoryService.updateBatch(user.orgId!, id, user.sub, dto);
+  }
+
   @Delete(':id')
   @Roles(UserRole.PHARMACY)
   @RequirePermissions(Permissions.INVENTORY_MANAGE)
   @ApiOperation({ summary: 'Soft delete an inventory batch' })
-  async deleteBatch(
-    @CurrentUser() user: JwtPayload,
-    @Param('id') id: string,
-  ) {
+  async deleteBatch(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
     return this.inventoryService.deleteBatch(user.orgId!, id, user.sub);
   }
 }

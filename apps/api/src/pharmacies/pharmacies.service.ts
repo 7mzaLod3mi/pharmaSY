@@ -39,12 +39,18 @@ export class PharmaciesService {
       select: { emailVerifiedAt: true },
     });
     if (!user?.emailVerifiedAt) {
-      throw new BadRequestException('Email must be verified before organization registration');
+      throw new BadRequestException(
+        'Email must be verified before organization registration',
+      );
     }
 
-    const existing = await this.prisma.pharmacy.findUnique({ where: { userId } });
+    const existing = await this.prisma.pharmacy.findUnique({
+      where: { userId },
+    });
     if (existing) {
-      throw new ConflictException('Pharmacy profile already exists for this user');
+      throw new ConflictException(
+        'Pharmacy profile already exists for this user',
+      );
     }
 
     const licenseExists = await this.prisma.pharmacy.findUnique({
@@ -76,19 +82,25 @@ export class PharmaciesService {
   }
 
   async getProfile(userId: string) {
-    const pharmacy = await this.prisma.pharmacy.findUnique({ where: { userId } });
+    const pharmacy = await this.prisma.pharmacy.findUnique({
+      where: { userId },
+    });
     if (!pharmacy) throw new NotFoundException('Pharmacy profile not found');
     return pharmacy;
   }
 
   async getById(pharmacyId: string) {
-    const pharmacy = await this.prisma.pharmacy.findUnique({ where: { id: pharmacyId } });
+    const pharmacy = await this.prisma.pharmacy.findUnique({
+      where: { id: pharmacyId },
+    });
     if (!pharmacy) throw new NotFoundException('Pharmacy not found');
     return pharmacy;
   }
 
   async updateProfile(userId: string, data: UpdatePharmacyProfileDto) {
-    const pharmacy = await this.prisma.pharmacy.findUnique({ where: { userId } });
+    const pharmacy = await this.prisma.pharmacy.findUnique({
+      where: { userId },
+    });
     if (!pharmacy) throw new NotFoundException('Pharmacy profile not found');
 
     const updated = await this.prisma.pharmacy.update({

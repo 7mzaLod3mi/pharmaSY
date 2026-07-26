@@ -17,6 +17,7 @@ import {
   ClipboardList,
   UploadCloud,
   Receipt,
+  MessageSquarePlus,
 } from "lucide-react";
 import type { NavSection } from "@/components/layout/sidebar";
 
@@ -96,6 +97,11 @@ export const adminNav: NavSection[] = [
       { label: "workspace.categories", href: "/admin/categories", icon: Tags },
       { label: "workspace.manufacturers", href: "/admin/manufacturers", icon: Factory },
       { label: "workspace.products", href: "/admin/products", icon: Package },
+      {
+        label: "workspace.productRequests",
+        href: "/admin/products/requests",
+        icon: MessageSquarePlus,
+      },
     ],
   },
   {

@@ -17,8 +17,8 @@ import {
   THead,
   TR,
 } from "@/components/ui/table";
-import { Loader2, ArrowLeft, Printer, Ban } from "lucide-react";
-import { useOrderDetails, useCancelOrder } from "@/features/orders/hooks/use-orders";
+import { Loader2, ArrowLeft, Printer, Ban, PackageCheck } from "lucide-react";
+import { useOrderDetails, useCancelOrder, useConfirmOrderDelivery } from "@/features/orders/hooks/use-orders";
 import type { OrderStatus } from "@/features/orders/api/orders.types";
 import { normalizeApiError } from "@/lib/http-client";
 
@@ -35,6 +35,7 @@ export default function PharmacyOrderDetailsPage({ params }: { params: Promise<{
   const { id } = use(params);
   const { data: order, isLoading } = useOrderDetails(id);
   const cancelOrder = useCancelOrder();
+  const confirmDelivery = useConfirmOrderDelivery();
 
   if (isLoading) {
     return (
@@ -91,6 +92,25 @@ export default function PharmacyOrderDetailsPage({ params }: { params: Promise<{
               >
                 {cancelOrder.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Ban className="mr-2 size-4" />}
                 {cancelOrder.isPending ? "Cancelling..." : "Cancel Order"}
+              </Button>
+            )}
+            {oStatus === "shipped" && (
+              <Button
+                onClick={() => {
+                  if (!window.confirm("Confirm that this order was physically received? Stock will be added to inventory.")) return;
+                  confirmDelivery.mutate(id, {
+                    onSuccess: () => toast.success("Receipt confirmed and inventory updated."),
+                    onError: (error) => toast.error(normalizeApiError(error).message),
+                  });
+                }}
+                disabled={confirmDelivery.isPending}
+              >
+                {confirmDelivery.isPending ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <PackageCheck className="mr-2 size-4" />
+                )}
+                Confirm receipt
               </Button>
             )}
           </>

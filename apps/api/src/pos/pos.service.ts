@@ -47,9 +47,16 @@ export class PosService {
     private readonly inventoryService: InventoryService,
   ) {}
 
-  async createSale(pharmacyId: string, staffUserId: string, dto: CreateSaleDto) {
+  async createSale(
+    pharmacyId: string,
+    staffUserId: string,
+    dto: CreateSaleDto,
+  ) {
     const mutationHash = this.hashMutation({ type: 'SALE', ...dto });
-    const existing = await this.findSaleByMutation(pharmacyId, dto.clientMutationId);
+    const existing = await this.findSaleByMutation(
+      pharmacyId,
+      dto.clientMutationId,
+    );
     if (existing) return this.assertIdempotent(existing, mutationHash);
 
     try {
@@ -343,7 +350,7 @@ export class PosService {
               saleItemId: item.id,
               quantity: item.quantity,
             }))
-          : input.items ?? [];
+          : (input.items ?? []);
         this.assertUniqueIds(
           requestedItems.map((item) => item.saleItemId),
           'Duplicate sale items are not allowed in a return',
@@ -609,7 +616,9 @@ export class PosService {
     const items = [...dto.items]
       .sort((a, b) => a.productId.localeCompare(b.productId))
       .map((item) => {
-        const product = products.find((candidate) => candidate.id === item.productId)!;
+        const product = products.find(
+          (candidate) => candidate.id === item.productId,
+        )!;
         const authoritativePrice = priceByProduct.get(item.productId);
         if (!authoritativePrice) {
           throw new ConflictException(
@@ -673,9 +682,7 @@ export class PosService {
         item.lineNetAmount,
       );
       item.netAmount = item.lineNetAmount.minus(item.saleDiscountAmount);
-      unallocatedDiscount = unallocatedDiscount.minus(
-        item.saleDiscountAmount,
-      );
+      unallocatedDiscount = unallocatedDiscount.minus(item.saleDiscountAmount);
     });
 
     return {
@@ -718,8 +725,13 @@ export class PosService {
       if (remaining.isZero() && payment.method !== SalePaymentMethod.CASH) {
         throw new BadRequestException('Only cash may exceed the sale total');
       }
-      if (tendered.greaterThan(remaining) && payment.method !== SalePaymentMethod.CASH) {
-        throw new BadRequestException('Non-cash payment exceeds the remaining balance');
+      if (
+        tendered.greaterThan(remaining) &&
+        payment.method !== SalePaymentMethod.CASH
+      ) {
+        throw new BadRequestException(
+          'Non-cash payment exceeds the remaining balance',
+        );
       }
       const applied = Prisma.Decimal.min(tendered, remaining);
       const change = tendered.minus(applied);
@@ -799,7 +811,9 @@ export class PosService {
         where: { id: allocation.inventoryId },
       });
       if (!inventory || inventory.pharmacyId !== pharmacyId) {
-        throw new ConflictException('Original inventory allocation is unavailable');
+        throw new ConflictException(
+          'Original inventory allocation is unavailable',
+        );
       }
 
       await tx.inventory.update({
@@ -991,9 +1005,10 @@ export class PosService {
   }
 
   private canonicalize(value: unknown): unknown {
-    if (Array.isArray(value)) return value.map((entry) => this.canonicalize(entry));
+    if (Array.isArray(value))
+      return value.map((entry) => this.canonicalize(entry));
     if (value && typeof value === 'object') {
-      return Object.keys(value as Record<string, unknown>)
+      return Object.keys(value)
         .sort()
         .reduce<Record<string, unknown>>((result, key) => {
           result[key] = this.canonicalize(
@@ -1013,10 +1028,10 @@ export class PosService {
 
   private assertPaymentReference(payment: PosPaymentDto) {
     const methodsRequiringReference = new Set<SalePaymentMethod>([
-        SalePaymentMethod.CARD,
-        SalePaymentMethod.BANK_TRANSFER,
-        SalePaymentMethod.MOBILE_WALLET,
-      ]);
+      SalePaymentMethod.CARD,
+      SalePaymentMethod.BANK_TRANSFER,
+      SalePaymentMethod.MOBILE_WALLET,
+    ]);
     if (
       methodsRequiringReference.has(payment.method) &&
       !payment.reference?.trim()

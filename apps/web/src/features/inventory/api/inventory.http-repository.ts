@@ -84,6 +84,7 @@ function groupProducts(batches: RawBatch[]): InventoryProduct[] {
         batch.sellingPrice === null || batch.sellingPrice === undefined
           ? undefined
           : Number(batch.sellingPrice),
+      minStock: batch.minStock,
       status: batchStatus(batch),
     };
     const existing = grouped.get(batch.productId);
@@ -179,6 +180,13 @@ export const inventoryHttpRepository: InventoryRepository = {
     await apiRequest({
       method: "PATCH",
       url: `/inventory/${id}/adjust`,
+      data,
+    });
+  },
+  async updateBatch(id, data) {
+    await apiRequest({
+      method: "PATCH",
+      url: `/inventory/${id}`,
       data,
     });
   },

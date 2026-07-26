@@ -8,7 +8,12 @@ import {
   Res,
   ForbiddenException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import {
@@ -21,11 +26,17 @@ import {
 } from './dto/auth.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { AllowPendingOrganization } from '../common/decorators/allow-pending-organization.decorator';
+import type { JwtPayload } from '@pharmasyn/types';
+import { ConfigService } from '@nestjs/config';
+import { parseTokenDuration } from './token-duration';
 
 @ApiTags('auth')
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Public()
   @Post('register')
@@ -41,8 +52,13 @@ export class AuthController {
   @Public()
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Verify a registered email using the six-digit OTP' })
-  @ApiResponse({ status: 200, description: 'Email verification stage completed' })
+  @ApiOperation({
+    summary: 'Verify a registered email using the six-digit OTP',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Email verification stage completed',
+  })
   verifyEmail(@Body() dto: VerifyEmailDto) {
     return this.authService.verifyEmail(dto);
   }
@@ -89,7 +105,10 @@ export class AuthController {
     description:
       'Invalid credentials, unverified email, suspended account, or banned account',
   })
-  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const data = await this.authService.login(dto);
     this.setRefreshCookie(res, data.refreshToken);
 
@@ -104,11 +123,18 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token' })
-  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     this.assertTrustedOrigin(req);
-    const refreshToken = req.cookies?.refresh_token;
+    const cookies = (req as unknown as { cookies?: unknown }).cookies;
+    const refreshToken =
+      cookies && typeof cookies === 'object'
+        ? (cookies as Record<string, unknown>).refresh_token
+        : undefined;
 
-    if (!refreshToken) {
+    if (typeof refreshToken !== 'string' || !refreshToken) {
       this.clearRefreshCookie(res);
       return this.authService.rejectMissingRefreshToken();
     }
@@ -132,7 +158,10 @@ export class AuthController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Logout and revoke tokens' })
-  async logout(@Req() req: any, @Res({ passthrough: true }) res: Response) {
+  async logout(
+    @Req() req: Request & { user: JwtPayload },
+    @Res({ passthrough: true }) res: Response,
+  ) {
     this.assertTrustedOrigin(req);
     const userId = req.user.sub;
     await this.authService.logout(userId);
@@ -146,7 +175,10 @@ export class AuthController {
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.COOKIE_SAME_SITE === 'none' ? 'none' : 'lax',
       path: '/api/v1/auth',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: parseTokenDuration(
+        this.configService.get<string>('JWT_REFRESH_EXPIRY', '7d'),
+        '7d',
+      ),
     });
   }
 

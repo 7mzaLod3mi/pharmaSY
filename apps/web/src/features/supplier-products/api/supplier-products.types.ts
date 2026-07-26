@@ -27,10 +27,10 @@ export interface UpsertSupplierProductInput {
   price: number;
   stock: number;
   minOrder: number;
-  expiryDate?: string;
+  expiryDate: string;
   notes?: string;
   isAvailable?: boolean;
-  batchNumber?: string;
+  batchNumber: string;
   quantityDiscounts?: QuantityDiscountTier[];
 }
 

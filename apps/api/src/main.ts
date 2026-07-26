@@ -36,7 +36,7 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
       transform: true,
       transformOptions: { enableImplicitConversion: true },
-    })
+    }),
   );
 
   // ─── Swagger ──────────────────────────────────────────────────────────────
@@ -74,4 +74,4 @@ async function bootstrap() {
   console.log(`📚 Swagger docs at:         http://localhost:${port}/api/docs`);
 }
 
-bootstrap();
+void bootstrap();

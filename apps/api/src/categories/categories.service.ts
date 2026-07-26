@@ -59,11 +59,15 @@ export class CategoriesService {
   }
 
   async create(dto: CreateCategoryDto) {
-    const slugExists = await this.prisma.category.findUnique({ where: { slug: dto.slug } });
+    const slugExists = await this.prisma.category.findUnique({
+      where: { slug: dto.slug },
+    });
     if (slugExists) throw new ConflictException('Slug already in use');
 
     if (dto.parentId) {
-      const parent = await this.prisma.category.findUnique({ where: { id: dto.parentId } });
+      const parent = await this.prisma.category.findUnique({
+        where: { id: dto.parentId },
+      });
       if (!parent) throw new BadRequestException('Parent category not found');
     }
 
@@ -85,11 +89,15 @@ export class CategoriesService {
 
   async remove(id: string) {
     const category = await this.findById(id);
-    if ((category._count as any).products > 0) {
-      throw new BadRequestException('Cannot delete category with associated products');
+    if (category._count.products > 0) {
+      throw new BadRequestException(
+        'Cannot delete category with associated products',
+      );
     }
     if (category.children.length > 0) {
-      throw new BadRequestException('Cannot delete category with subcategories');
+      throw new BadRequestException(
+        'Cannot delete category with subcategories',
+      );
     }
     return this.prisma.category.delete({ where: { id } });
   }

@@ -46,7 +46,9 @@ describe('AuthService security invariants', () => {
   });
 
   it('rejects refresh attempts without a cookie', () => {
-    expect(() => service.rejectMissingRefreshToken()).toThrow(UnauthorizedException);
+    expect(() => service.rejectMissingRefreshToken()).toThrow(
+      UnauthorizedException,
+    );
   });
 
   it('does not create an account when email delivery is not configured', async () => {

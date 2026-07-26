@@ -119,7 +119,7 @@ export class ReportExportsService {
         data: {
           requestedByUserId: context.userId,
           orgId: context.orgId,
-          orgRole: context.role as PrismaUserRole,
+          orgRole: context.role,
           reportType: dto.reportType,
           format: dto.format,
           locale: dto.locale,
@@ -269,7 +269,7 @@ export class ReportExportsService {
         id,
         requestedByUserId: context.userId,
         orgId: context.orgId,
-        orgRole: context.role as PrismaUserRole,
+        orgRole: context.role,
       },
     });
     if (!item) throw new NotFoundException('Report export not found');

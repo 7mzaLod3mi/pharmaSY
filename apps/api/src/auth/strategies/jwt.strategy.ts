@@ -68,13 +68,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       });
     }
 
+    const role = user.role as UserRole;
     const organization =
-      user.role === UserRole.PHARMACY ? user.pharmacy : user.supplier;
+      role === UserRole.PHARMACY ? user.pharmacy : user.supplier;
 
     return {
       ...payload,
       email: user.email,
-      role: user.role as UserRole,
+      role,
       status,
       orgId: organization?.id,
       orgStatus: organization?.status as OrgStatus | undefined,

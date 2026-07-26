@@ -2,7 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from './notifications.service';
-import { NotificationType, NotificationCategory, NotificationPriority, DigestFrequency, NotificationChannel } from '@prisma/client';
+import {
+  NotificationType,
+  NotificationCategory,
+  NotificationPriority,
+  DigestFrequency,
+} from '@prisma/client';
 
 @Injectable()
 export class NotificationsScheduler {
@@ -17,11 +22,11 @@ export class NotificationsScheduler {
   async handleExpiryAlerts() {
     this.logger.debug('Running daily expiry alerts check...');
     const targetDays = [30, 14, 7, 3, 1, 0];
-    
+
     for (const days of targetDays) {
       const targetDate = new Date();
       targetDate.setDate(targetDate.getDate() + days);
-      
+
       const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
       const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
 
@@ -48,7 +53,10 @@ export class NotificationsScheduler {
             userId: pharmacy.userId,
             type: NotificationType.EXPIRY_ALERT,
             category: NotificationCategory.INVENTORY,
-            priority: days <= 7 ? NotificationPriority.CRITICAL : NotificationPriority.HIGH,
+            priority:
+              days <= 7
+                ? NotificationPriority.CRITICAL
+                : NotificationPriority.HIGH,
             eventId: `expiry-${item.id}-${days}days`,
             entityType: 'Inventory',
             entityId: item.id,
@@ -128,7 +136,7 @@ export class NotificationsScheduler {
   @Cron(CronExpression.EVERY_DAY_AT_8AM)
   async generateDailyDigests() {
     this.logger.debug('Running daily digest generation...');
-    
+
     const prefs = await this.prisma.notificationPreference.findMany({
       where: { digestFrequency: DigestFrequency.DAILY },
     });
@@ -165,7 +173,7 @@ export class NotificationsScheduler {
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async cleanupExpiredNotifications() {
     this.logger.debug('Cleaning up expired notifications...');
-    
+
     const result = await this.prisma.notification.updateMany({
       where: {
         expiresAt: { lt: new Date() },

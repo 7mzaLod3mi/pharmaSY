@@ -1,17 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as AWS from 'aws-sdk';
-import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class UploadService {
   private s3: AWS.S3;
   private bucketName: string;
-  private publicUrl: string;
 
   constructor(private config: ConfigService) {
-    this.bucketName = this.config.get<string>('R2_BUCKET_NAME', 'pharmasyn-files');
-    this.publicUrl = this.config.get<string>('R2_PUBLIC_URL', '');
+    this.bucketName = this.config.get<string>(
+      'R2_BUCKET_NAME',
+      'pharmasyn-files',
+    );
 
     this.s3 = new AWS.S3({
       endpoint: `https://${this.config.get('R2_ACCOUNT_ID')}.r2.cloudflarestorage.com`,
@@ -20,28 +20,6 @@ export class UploadService {
       signatureVersion: 'v4',
       region: 'auto',
     });
-  }
-
-  async uploadFile(
-    file: Express.Multer.File,
-    folder: string = 'uploads'
-  ): Promise<{ key: string; url: string }> {
-    const ext = file.originalname.split('.').pop();
-    const key = `${folder}/${uuidv4()}.${ext}`;
-
-    await this.s3
-      .putObject({
-        Bucket: this.bucketName,
-        Key: key,
-        Body: file.buffer,
-        ContentType: file.mimetype,
-      })
-      .promise();
-
-    return {
-      key,
-      url: `${this.publicUrl}/${key}`,
-    };
   }
 
   async deleteFile(key: string): Promise<void> {
@@ -83,6 +61,21 @@ export class UploadService {
       Expires: Math.min(Math.max(expiresSeconds, 60), 3600),
       ResponseContentDisposition: `attachment; filename="${this.safeFileName(fileName)}"`,
     });
+  }
+
+  async getPrivateBuffer(key: string): Promise<Buffer> {
+    const object = await this.s3
+      .getObject({
+        Bucket: this.bucketName,
+        Key: key,
+      })
+      .promise();
+    if (!object.Body) {
+      throw new Error('Stored file is empty');
+    }
+    return Buffer.isBuffer(object.Body)
+      ? object.Body
+      : Buffer.from(object.Body as Uint8Array);
   }
 
   private safeFileName(fileName: string) {

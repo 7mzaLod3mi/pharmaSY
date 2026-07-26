@@ -16,11 +16,7 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import {
-  DiscountType,
-  SalePaymentMethod,
-  SaleStatus,
-} from '@prisma/client';
+import { DiscountType, SalePaymentMethod, SaleStatus } from '@prisma/client';
 
 export class PosPaymentDto {
   @ApiProperty({ enum: SalePaymentMethod, example: SalePaymentMethod.CASH })
@@ -112,7 +108,10 @@ export class CreateSaleDto {
   @MaxLength(1000)
   notes?: string;
 
-  @ApiProperty({ format: 'uuid', description: 'Stable client-generated mutation identifier' })
+  @ApiProperty({
+    format: 'uuid',
+    description: 'Stable client-generated mutation identifier',
+  })
   @IsUUID()
   clientMutationId: string;
 

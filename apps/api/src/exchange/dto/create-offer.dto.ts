@@ -1,4 +1,10 @@
-import { IsString, IsNumber, IsPositive, IsOptional, IsDateString } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsPositive,
+  IsOptional,
+  IsDateString,
+} from 'class-validator';
 
 export class CreateMarketplaceOfferDto {
   @IsString()

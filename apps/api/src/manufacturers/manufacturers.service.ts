@@ -49,7 +49,7 @@ export class ManufacturersService {
 
   async remove(id: string) {
     const m = await this.findById(id);
-    if ((m._count as any).products > 0) {
+    if (m._count.products > 0) {
       // Soft-deactivate instead of hard delete
       return this.prisma.manufacturer.update({
         where: { id },

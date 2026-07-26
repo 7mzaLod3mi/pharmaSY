@@ -1,6 +1,4 @@
-import {
-  Controller, Get, Post, Patch, Param, Body, HttpCode, HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { IsString, IsOptional, IsUUID, MinLength } from 'class-validator';
 import { ProductRequestsService } from './product-requests.service';
@@ -10,34 +8,44 @@ import { UserRole } from '@pharmasyn/types';
 import type { JwtPayload } from '@pharmasyn/types';
 
 export class CreateProductRequestDto {
-  @IsString() @MinLength(2)
+  @IsString()
+  @MinLength(2)
   brandName: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   genericName?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   manufacturer?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   category?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   dosageForm?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   strength?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   packageSize?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   barcode?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   imageUrl?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   notes?: string;
 }
 
@@ -45,21 +53,26 @@ export class ApproveRequestDto {
   @IsUUID()
   categoryId: string;
 
-  @IsString() @MinLength(2)
+  @IsString()
+  @MinLength(2)
   tradeNameAr: string;
 
-  @IsString() @MinLength(2)
+  @IsString()
+  @MinLength(2)
   tradeNameEn: string;
 
-  @IsString() @MinLength(1)
+  @IsString()
+  @MinLength(1)
   unit: string;
 
-  @IsOptional() @IsUUID()
+  @IsOptional()
+  @IsUUID()
   manufacturerId?: string;
 }
 
 export class RejectRequestDto {
-  @IsString() @MinLength(3)
+  @IsString()
+  @MinLength(3)
   reason: string;
 }
 
@@ -75,8 +88,13 @@ export class ProductRequestsController {
   constructor(private service: ProductRequestsService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Submit a new product request (Suppliers/Pharmacies)' })
-  create(@Body() dto: CreateProductRequestDto, @CurrentUser() user: JwtPayload) {
+  @ApiOperation({
+    summary: 'Submit a new product request (Suppliers/Pharmacies)',
+  })
+  create(
+    @Body() dto: CreateProductRequestDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
     return this.service.create(dto, user.sub);
   }
 
@@ -89,7 +107,9 @@ export class ProductRequestsController {
 
   @Get(':id/similar')
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Find similar master products for duplicate detection' })
+  @ApiOperation({
+    summary: 'Find similar master products for duplicate detection',
+  })
   findSimilar(@Param('id') id: string) {
     return this.service.findSimilar(id);
   }
@@ -97,7 +117,11 @@ export class ProductRequestsController {
   @Patch(':id/approve')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Approve request and create master product' })
-  approve(@Param('id') id: string, @Body() dto: ApproveRequestDto, @CurrentUser() user: JwtPayload) {
+  approve(
+    @Param('id') id: string,
+    @Body() dto: ApproveRequestDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
     return this.service.approve(id, user.sub, dto);
   }
 

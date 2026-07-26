@@ -18,7 +18,7 @@ export const nextSupplierOrderStatus: Record<SupplierOrderStatus, SupplierOrderS
   pending: "confirmed",
   confirmed: "processing",
   processing: "shipped",
-  shipped: "delivered",
+  shipped: null,
   delivered: null,
   cancelled: null,
 };

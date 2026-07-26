@@ -98,7 +98,7 @@ export class NotificationTemplate {
       bodyAr: String(data.bodyAr || ''),
       bodyEn: String(data.bodyEn || ''),
     }),
-    [NotificationType.PASSWORD_RESET]: (data) => ({
+    [NotificationType.PASSWORD_RESET]: () => ({
       titleAr: 'إعادة تعيين كلمة المرور',
       titleEn: 'Password Reset',
       bodyAr: 'تم طلب إعادة تعيين كلمة المرور لحسابك.',
@@ -112,7 +112,10 @@ export class NotificationTemplate {
     }),
   };
 
-  static generate(type: NotificationType, data: TemplateData): NotificationContent {
+  static generate(
+    type: NotificationType,
+    data: TemplateData,
+  ): NotificationContent {
     const templateFn = this.templates[type];
     if (!templateFn) {
       return {

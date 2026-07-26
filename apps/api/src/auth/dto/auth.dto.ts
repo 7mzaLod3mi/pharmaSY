@@ -1,4 +1,12 @@
-import { IsEmail, IsString, MinLength, IsIn, IsOptional, Matches, Length } from 'class-validator';
+import {
+  IsEmail,
+  IsString,
+  MinLength,
+  IsIn,
+  IsOptional,
+  Matches,
+  Length,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { UserRole } from '@pharmasyn/types';
@@ -24,18 +32,24 @@ export class RegisterDto {
   @ApiProperty({ example: '+963912345678' })
   @IsOptional()
   @IsString()
-  @Matches(/^(\+9639\d{8}|09\d{8})$/, { message: 'Invalid Syrian phone number' })
+  @Matches(/^(\+9639\d{8}|09\d{8})$/, {
+    message: 'Invalid Syrian phone number',
+  })
   phone?: string;
 
   @ApiProperty({ example: 'StrongPass1!' })
   @IsString()
   @MinLength(8)
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
-    message: 'Password must contain uppercase, lowercase, and numeric characters',
+    message:
+      'Password must contain uppercase, lowercase, and numeric characters',
   })
   password: string;
 
-  @ApiProperty({ enum: [UserRole.PHARMACY, UserRole.SUPPLIER], example: UserRole.PHARMACY })
+  @ApiProperty({
+    enum: [UserRole.PHARMACY, UserRole.SUPPLIER],
+    example: UserRole.PHARMACY,
+  })
   @IsIn([UserRole.PHARMACY, UserRole.SUPPLIER])
   role: UserRole;
 }
@@ -98,7 +112,8 @@ export class ResetPasswordDto {
   @IsString()
   @MinLength(8)
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
-    message: 'Password must contain uppercase, lowercase, and numeric characters',
+    message:
+      'Password must contain uppercase, lowercase, and numeric characters',
   })
   newPassword: string;
 }
@@ -114,7 +129,8 @@ export class ChangePasswordDto {
   @IsString()
   @MinLength(8)
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
-    message: 'Password must contain uppercase, lowercase, and numeric characters',
+    message:
+      'Password must contain uppercase, lowercase, and numeric characters',
   })
   newPassword: string;
 }

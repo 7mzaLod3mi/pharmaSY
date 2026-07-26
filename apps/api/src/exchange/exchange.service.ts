@@ -1,17 +1,43 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import type { Inventory } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMarketplaceOfferDto } from './dto/create-offer.dto';
 
 @Injectable()
 export class ExchangeService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+  ) {}
 
-  async publishOffer(pharmacyId: string, dto: CreateMarketplaceOfferDto, userId: string) {
+  async publishOffer(
+    pharmacyId: string,
+    dto: CreateMarketplaceOfferDto,
+    userId: string,
+  ) {
+    if (
+      this.configService.get<string>(
+        'EXCHANGE_MARKETPLACE_ENABLED',
+        'false',
+      ) !== 'true'
+    ) {
+      throw new ServiceUnavailableException({
+        code: 'EXCHANGE_DISABLED',
+        message:
+          'Pharmacy exchange is disabled until deployment-specific legal and moderation rules are configured.',
+      });
+    }
     return this.prisma.$transaction(async (tx) => {
       // 1. Find Inventory Batch and lock it to prevent concurrent publishing oversell
       let inventory;
       if (dto.batchNumber) {
-        const batches: any[] = await tx.$queryRaw`
+        const batches = await tx.$queryRaw<Inventory[]>`
           SELECT * FROM "inventory" 
           WHERE "pharmacyId" = ${pharmacyId} 
             AND "productId" = ${dto.productId} 
@@ -22,7 +48,7 @@ export class ExchangeService {
         inventory = batches[0];
       } else {
         // Find nearest expiring batch that has enough available stock
-        const batches: any[] = await tx.$queryRaw`
+        const batches = await tx.$queryRaw<Inventory[]>`
           SELECT * FROM "inventory" 
           WHERE "pharmacyId" = ${pharmacyId} 
             AND "productId" = ${dto.productId} 
@@ -35,12 +61,16 @@ export class ExchangeService {
       }
 
       if (!inventory || inventory.deletedAt) {
-        throw new NotFoundException('Suitable inventory batch not found for this product');
+        throw new NotFoundException(
+          'Suitable inventory batch not found for this product',
+        );
       }
 
       const availableStock = inventory.quantity - inventory.reservedStock;
       if (availableStock < dto.quantity) {
-        throw new BadRequestException(`Insufficient available stock. Available: ${availableStock}`);
+        throw new BadRequestException(
+          `Insufficient available stock. Available: ${availableStock}`,
+        );
       }
 
       // 2. Reserve Stock
@@ -79,7 +109,7 @@ export class ExchangeService {
           reason: `Published offer ${offer.id}`,
           marketplaceOfferId: offer.id,
           userId,
-        }
+        },
       });
 
       return offer;
@@ -90,7 +120,7 @@ export class ExchangeService {
     return this.prisma.$transaction(async (tx) => {
       const offer = await tx.marketplaceOffer.findFirst({
         where: { id: offerId, pharmacyId },
-        include: { originalInventory: true }
+        include: { originalInventory: true },
       });
 
       if (!offer) {
@@ -127,7 +157,7 @@ export class ExchangeService {
             reason: `Cancelled offer ${offer.id}`,
             marketplaceOfferId: offer.id,
             userId,
-          }
+          },
         });
       }
 

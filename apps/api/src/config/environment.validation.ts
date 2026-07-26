@@ -1,5 +1,9 @@
 export function validateEnvironment(config: Record<string, unknown>) {
-  const nodeEnv = String(config.NODE_ENV || 'development');
+  const readString = (key: string, fallback = ''): string => {
+    const value = config[key];
+    return typeof value === 'string' ? value : fallback;
+  };
+  const nodeEnv = readString('NODE_ENV', 'development');
   const required = ['DATABASE_URL'];
 
   if (nodeEnv === 'production') {
@@ -12,9 +16,11 @@ export function validateEnvironment(config: Record<string, unknown>) {
     );
   }
 
-  const missing = required.filter((key) => !String(config[key] || '').trim());
+  const missing = required.filter((key) => !readString(key).trim());
   if (missing.length) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+    throw new Error(
+      `Missing required environment variables: ${missing.join(', ')}`,
+    );
   }
 
   if (
@@ -27,7 +33,7 @@ export function validateEnvironment(config: Record<string, unknown>) {
 
   if (
     config.RESEND_FROM_EMAIL &&
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(config.RESEND_FROM_EMAIL))
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(readString('RESEND_FROM_EMAIL'))
   ) {
     throw new Error('RESEND_FROM_EMAIL must be a valid email address');
   }

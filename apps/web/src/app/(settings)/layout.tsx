@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { adminNav, pharmacyNav, supplierNav } from "@/lib/nav-config";
 import { useAuth } from "@/features/auth/auth-provider";
@@ -13,7 +13,19 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  if (state === "loading" || !user) return null;
+  useEffect(() => {
+    if (state === "anonymous") {
+      router.replace("/login");
+    }
+  }, [router, state]);
+
+  if (state === "loading" || !user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
+        {state === "loading" ? "Loading account…" : "Redirecting to login…"}
+      </div>
+    );
+  }
 
   const sections = 
     user.role === "ADMIN" ? adminNav : 

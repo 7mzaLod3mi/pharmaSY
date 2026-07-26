@@ -5,12 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  OrderStatus,
-  OrgStatus,
-  Prisma,
-  ProductStatus,
-} from '@prisma/client';
+import { OrderStatus, OrgStatus, Prisma, ProductStatus } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UserRole } from '@pharmasyn/types';
 import { PrismaService } from '../prisma/prisma.service';
@@ -43,7 +38,10 @@ export class OrdersService {
     this.validateCheckoutPayload(dto);
 
     if (dto.clientMutationId) {
-      const existing = await this.findCheckoutByMutation(pharmacyId, dto.clientMutationId);
+      const existing = await this.findCheckoutByMutation(
+        pharmacyId,
+        dto.clientMutationId,
+      );
       if (existing) return existing;
     }
 
@@ -59,7 +57,10 @@ export class OrdersService {
         return result;
       } catch (error) {
         if (dto.clientMutationId && this.isUniqueConstraintError(error)) {
-          const existing = await this.findCheckoutByMutation(pharmacyId, dto.clientMutationId);
+          const existing = await this.findCheckoutByMutation(
+            pharmacyId,
+            dto.clientMutationId,
+          );
           if (existing) return existing;
         }
         if (this.isRetryableTransactionError(error) && attempt < maxAttempts) {
@@ -90,7 +91,10 @@ export class OrdersService {
       }),
       this.prisma.order.count({ where }),
     ]);
-    return { data, meta: this.paginationMeta(total, pagination.page, pagination.limit) };
+    return {
+      data,
+      meta: this.paginationMeta(total, pagination.page, pagination.limit),
+    };
   }
 
   async findSupplierOrders(
@@ -122,7 +126,10 @@ export class OrdersService {
       }),
       this.prisma.order.count({ where }),
     ]);
-    return { data, meta: this.paginationMeta(total, pagination.page, pagination.limit) };
+    return {
+      data,
+      meta: this.paginationMeta(total, pagination.page, pagination.limit),
+    };
   }
 
   async getOrderDetails(orderId: string, orgId: string, role: UserRole) {
@@ -130,11 +137,23 @@ export class OrdersService {
       where: { id: orderId, deletedAt: null },
       include: {
         pharmacy: {
-          select: { id: true, name: true, phone: true, address: true, city: true },
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            address: true,
+            city: true,
+          },
         },
         supplier: { select: { id: true, name: true, phone: true, city: true } },
         sellerPharmacy: {
-          select: { id: true, name: true, phone: true, address: true, city: true },
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            address: true,
+            city: true,
+          },
         },
         items: {
           include: {
@@ -193,6 +212,8 @@ export class OrdersService {
         where: { id: orderId, deletedAt: null },
         include: {
           pharmacy: { select: { userId: true } },
+          supplier: { select: { userId: true } },
+          sellerPharmacy: { select: { userId: true } },
           items: {
             include: {
               supplierProduct: true,
@@ -205,14 +226,25 @@ export class OrdersService {
 
       const isAuthorizedSeller =
         (sellerRole === UserRole.SUPPLIER && order.supplierId === sellerId) ||
-        (sellerRole === UserRole.PHARMACY && order.sellerPharmacyId === sellerId);
+        (sellerRole === UserRole.PHARMACY &&
+          order.sellerPharmacyId === sellerId);
       const isBuyerCancellation =
         sellerRole === UserRole.PHARMACY &&
         order.pharmacyId === sellerId &&
         targetStatus === OrderStatus.CANCELLED &&
         (order.status === OrderStatus.PENDING ||
           order.status === OrderStatus.CONFIRMED);
-      if (!isAuthorizedSeller && !isBuyerCancellation) {
+      const isBuyerDeliveryConfirmation =
+        sellerRole === UserRole.PHARMACY &&
+        order.pharmacyId === sellerId &&
+        targetStatus === OrderStatus.DELIVERED &&
+        order.status === OrderStatus.SHIPPED;
+      if (
+        (!isAuthorizedSeller &&
+          !isBuyerCancellation &&
+          !isBuyerDeliveryConfirmation) ||
+        (isAuthorizedSeller && targetStatus === OrderStatus.DELIVERED)
+      ) {
         throw new ForbiddenException('Access denied');
       }
       if (order.status === targetStatus) return order;
@@ -248,14 +280,32 @@ export class OrdersService {
         },
       });
 
-      return { ...updated, pharmacy: order.pharmacy };
+      return {
+        ...updated,
+        pharmacy: order.pharmacy,
+        supplier: order.supplier,
+        sellerPharmacy: order.sellerPharmacy,
+      };
     });
 
-    await this.emitSafely('order.status_changed', {
-      order: result,
-      buyerUserId: result.pharmacy.userId,
-      newStatus: targetStatus,
-    });
+    const actorIsBuyer =
+      sellerRole === UserRole.PHARMACY && result.pharmacyId === sellerId;
+    const sellerUserId =
+      result.supplier?.userId ?? result.sellerPharmacy?.userId;
+    const recipientUserId = actorIsBuyer
+      ? sellerUserId
+      : result.pharmacy.userId;
+    if (recipientUserId)
+      await this.emitSafely('order.status_changed', {
+        order: result,
+        recipientUserId,
+        actionUrl: actorIsBuyer
+          ? result.supplierId
+            ? `/supplier/orders/${result.id}`
+            : '/pharmacy/exchange'
+          : `/pharmacy/orders/${result.id}`,
+        newStatus: targetStatus,
+      });
     return result;
   }
 
@@ -302,7 +352,9 @@ export class OrdersService {
 
     let overallTotal = new Prisma.Decimal(0);
     const createdOrderIds: string[] = [];
-    const sortedGroups = [...dto.groups].sort((a, b) => a.supplierId.localeCompare(b.supplierId));
+    const sortedGroups = [...dto.groups].sort((a, b) =>
+      a.supplierId.localeCompare(b.supplierId),
+    );
 
     for (const group of sortedGroups) {
       const prepared = await this.prepareGroup(tx, pharmacyId, group);
@@ -313,7 +365,8 @@ export class OrdersService {
           checkoutGroupId: checkoutGroup.id,
           pharmacyId,
           supplierId: prepared.kind === 'SUPPLIER' ? group.supplierId : null,
-          sellerPharmacyId: prepared.kind === 'PHARMACY' ? group.supplierId : null,
+          sellerPharmacyId:
+            prepared.kind === 'PHARMACY' ? group.supplierId : null,
           totalAmount: prepared.total,
           status: OrderStatus.PENDING,
           notes: group.notes,
@@ -370,7 +423,9 @@ export class OrdersService {
     for (const item of sortedItems) {
       const itemKind = item.supplierProductId ? 'SUPPLIER' : 'PHARMACY';
       if (kind && kind !== itemKind) {
-        throw new BadRequestException('A checkout group cannot mix supplier and C2C offers');
+        throw new BadRequestException(
+          'A checkout group cannot mix supplier and C2C offers',
+        );
       }
       kind = itemKind;
 
@@ -381,35 +436,53 @@ export class OrdersService {
           include: { supplier: true, product: true },
         });
         if (!offer || !offer.isAvailable) {
-          throw new BadRequestException(`Supplier offer ${item.supplierProductId} is unavailable`);
+          throw new BadRequestException(
+            `Supplier offer ${item.supplierProductId} is unavailable`,
+          );
         }
         if (
           offer.supplierId !== group.supplierId ||
           offer.supplier.status !== OrgStatus.APPROVED
         ) {
-          throw new BadRequestException('Supplier group does not match the selected offer');
+          throw new BadRequestException(
+            'Supplier group does not match the selected offer',
+          );
         }
         if (offer.product.status !== ProductStatus.ACTIVE) {
           throw new BadRequestException('Product is not active');
         }
-        if (offer.expiryDate && offer.expiryDate <= new Date()) {
-          throw new BadRequestException('Expired supplier stock cannot be ordered');
+        if (!offer.batchNumber || !offer.expiryDate) {
+          throw new BadRequestException(
+            'Supplier offer is missing batch or expiry information',
+          );
+        }
+        if (offer.expiryDate <= new Date()) {
+          throw new BadRequestException(
+            'Expired supplier stock cannot be ordered',
+          );
         }
         if (offer.stock < item.quantity || item.quantity < offer.minOrder) {
-          throw new BadRequestException(`Invalid quantity for supplier offer ${offer.id}`);
+          throw new BadRequestException(
+            `Invalid quantity for supplier offer ${offer.id}`,
+          );
         }
 
         await tx.supplierProduct.update({
           where: { id: offer.id },
           data: { stock: { decrement: item.quantity } },
         });
-        const subtotal = offer.price.mul(item.quantity);
+        const unitPrice = this.resolveSupplierUnitPrice(
+          offer.price,
+          offer.quantityDiscounts,
+          item.quantity,
+        );
+        const subtotal = unitPrice.mul(item.quantity);
         total = total.plus(subtotal);
         items.push({
           productId: offer.productId,
           supplierProductId: offer.id,
           quantity: item.quantity,
-          unitPrice: offer.price,
+          unitPrice,
           subtotal,
         });
       } else {
@@ -439,7 +512,9 @@ export class OrdersService {
           offer.originalInventory.quantity < item.quantity ||
           offer.originalInventory.reservedStock < item.quantity
         ) {
-          throw new BadRequestException(`Insufficient stock for C2C offer ${offer.id}`);
+          throw new BadRequestException(
+            `Insufficient stock for C2C offer ${offer.id}`,
+          );
         }
 
         await tx.marketplaceOffer.update({
@@ -517,16 +592,23 @@ export class OrdersService {
 
   private async receiveSupplierItem(
     tx: Prisma.TransactionClient,
-    order: { id: string; orderNumber: string; pharmacyId: string; supplierId: string | null },
+    order: {
+      id: string;
+      orderNumber: string;
+      pharmacyId: string;
+      supplierId: string | null;
+    },
     item: Prisma.OrderItemGetPayload<{ include: { supplierProduct: true } }>,
     userId: string,
   ) {
     const supplierProduct = item.supplierProduct!;
-    const batchNumber =
-      supplierProduct.batchNumber || `SUP-${order.orderNumber}-${item.id.slice(0, 4)}`;
-    const expiryDate =
-      supplierProduct.expiryDate ||
-      new Date(Date.UTC(new Date().getUTCFullYear() + 1, 0, 1));
+    if (!supplierProduct.batchNumber || !supplierProduct.expiryDate) {
+      throw new BadRequestException(
+        'Cannot receive supplier stock without batch and expiry information',
+      );
+    }
+    const batchNumber = supplierProduct.batchNumber;
+    const expiryDate = supplierProduct.expiryDate;
     const existing = await tx.inventory.findUnique({
       where: {
         pharmacyId_productId_batchNumber: {
@@ -667,16 +749,21 @@ export class OrdersService {
     if (!dto.groups?.length) throw new BadRequestException('Empty cart');
     const seenSources = new Set<string>();
     for (const group of dto.groups) {
-      if (!group.items?.length) throw new BadRequestException('Checkout group is empty');
+      if (!group.items?.length)
+        throw new BadRequestException('Checkout group is empty');
       for (const item of group.items) {
-        if (Boolean(item.supplierProductId) === Boolean(item.marketplaceOfferId)) {
+        if (
+          Boolean(item.supplierProductId) === Boolean(item.marketplaceOfferId)
+        ) {
           throw new BadRequestException(
             'Each checkout item must reference exactly one offer source',
           );
         }
         const sourceId = this.itemSourceId(item);
         if (seenSources.has(sourceId)) {
-          throw new BadRequestException('Duplicate offers must be combined into one item');
+          throw new BadRequestException(
+            'Duplicate offers must be combined into one item',
+          );
         }
         seenSources.add(sourceId);
       }
@@ -687,7 +774,38 @@ export class OrdersService {
     return item.supplierProductId || item.marketplaceOfferId || '';
   }
 
-  private async findCheckoutByMutation(pharmacyId: string, clientMutationId: string) {
+  private resolveSupplierUnitPrice(
+    basePrice: Prisma.Decimal,
+    rawTiers: Prisma.JsonValue,
+    quantity: number,
+  ) {
+    if (!Array.isArray(rawTiers)) return basePrice;
+    let resolved = basePrice;
+    for (const rawTier of rawTiers) {
+      if (!rawTier || typeof rawTier !== 'object' || Array.isArray(rawTier)) {
+        continue;
+      }
+      const tier = rawTier as Record<string, Prisma.JsonValue>;
+      const minimum = Number(tier.minQuantity);
+      const price = Number(tier.unitPrice);
+      if (
+        Number.isInteger(minimum) &&
+        minimum > 0 &&
+        quantity >= minimum &&
+        Number.isFinite(price) &&
+        price >= 0 &&
+        price <= Number(resolved)
+      ) {
+        resolved = new Prisma.Decimal(price);
+      }
+    }
+    return resolved;
+  }
+
+  private async findCheckoutByMutation(
+    pharmacyId: string,
+    clientMutationId: string,
+  ) {
     const checkoutGroup = await this.prisma.checkoutGroup.findUnique({
       where: { pharmacyId_clientMutationId: { pharmacyId, clientMutationId } },
       include: { orders: { include: { items: true } } },
@@ -706,16 +824,25 @@ export class OrdersService {
         order,
         sellerUserId: seller.userId,
         pharmacyName: order.pharmacy.name,
+        actionUrl: order.supplier
+          ? `/supplier/orders/${order.id}`
+          : '/pharmacy/exchange',
       });
     }
   }
 
   private isUniqueConstraintError(error: unknown) {
-    return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    );
   }
 
   private isRetryableTransactionError(error: unknown) {
-    return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034';
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2034'
+    );
   }
 
   private async emitSafely(event: string, payload: Record<string, unknown>) {

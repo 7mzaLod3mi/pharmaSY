@@ -133,7 +133,7 @@ export default function HomePage() {
               </p>
             </DirectionalReveal>
             <DirectionalReveal direction="up" distance={15} delay={0.4} className="mt-12">
-              <EditorialButton href="/suppliers" variant="secondary">
+              <EditorialButton href="/register" variant="secondary">
                 {isAr ? "اكتشف الموردين" : "View Suppliers"}
               </EditorialButton>
             </DirectionalReveal>

@@ -6,6 +6,7 @@ export interface InventoryBatch {
   reservedQuantity: number;
   availableQuantity: number;
   sellingPrice?: number;
+  minStock: number;
   status: "active" | "near_expiry" | "expired" | "damaged" | "blocked";
 }
 
@@ -43,6 +44,13 @@ export interface AdjustInventoryBatchInput {
   quantity: number;
   type: InventoryAdjustmentType;
   reason: string;
+  notes?: string;
+}
+
+export interface UpdateInventoryBatchInput {
+  sellingPrice?: number;
+  minStock?: number;
+  location?: string;
   notes?: string;
 }
 

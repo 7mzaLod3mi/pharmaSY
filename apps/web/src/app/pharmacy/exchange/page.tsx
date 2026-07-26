@@ -14,6 +14,7 @@ import { Search, Plus, PackageX, MapPin, CalendarClock } from "lucide-react";
 import { useExchangeListings } from "@/features/exchange/hooks/use-exchange";
 import { CreateListingDialog } from "@/features/exchange/components/create-listing-dialog";
 import type { ExchangeListingStatus } from "@/features/exchange/api/exchange.types";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 
 const statusMap: Record<ExchangeListingStatus, { label: string; variant: "success" | "warning" | "info" | "danger" | "neutral" }> = {
   active: { label: "Active", variant: "success" },
@@ -25,6 +26,28 @@ const statusMap: Record<ExchangeListingStatus, { label: string; variant: "succes
 };
 
 export default function ExchangeMarketplacePage() {
+  if (!isFeatureEnabled("exchangeMarketplace")) {
+    return (
+      <DashboardShell sections={pharmacyNav} roleLabel="Pharmacy" userName="Pharmacy">
+        <PageHeader
+          title="Exchange marketplace"
+          description="Pharmacy-to-pharmacy exchange is not enabled for this deployment."
+        />
+        <Card className="p-6">
+          <p className="text-sm text-muted-foreground">
+            This workflow remains unavailable until country-specific legal
+            limits, moderation, purchasing, fulfillment, and stock-transfer
+            rules are approved and implemented.
+          </p>
+        </Card>
+      </DashboardShell>
+    );
+  }
+
+  return <ExchangeMarketplaceContent />;
+}
+
+function ExchangeMarketplaceContent() {
   const [tab, setTab] = useState<"browse" | "mine">("browse");
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);

@@ -45,7 +45,9 @@ export class PosController {
       'Atomically records the sale, payments and discounts, deducts stock using FEFO, and supports safe idempotent retries.',
   })
   @ApiCreatedResponse({ description: 'Sale recorded successfully' })
-  @ApiBadRequestResponse({ description: 'Invalid pricing, payment, or insufficient stock' })
+  @ApiBadRequestResponse({
+    description: 'Invalid pricing, payment, or insufficient stock',
+  })
   @ApiConflictResponse({ description: 'Mutation identity conflict' })
   createSale(@CurrentUser() user: JwtPayload, @Body() dto: CreateSaleDto) {
     return this.posService.createSale(user.orgId!, user.sub, dto);
@@ -61,7 +63,10 @@ export class PosController {
 
   @Get('sales/:saleId')
   @RequirePermissions(Permissions.POS_SALES_READ)
-  @ApiOperation({ summary: 'Get a POS sale with items, FEFO allocations, payments and returns' })
+  @ApiOperation({
+    summary:
+      'Get a POS sale with items, FEFO allocations, payments and returns',
+  })
   @ApiOkResponse({ description: 'Sale details' })
   @ApiNotFoundResponse({ description: 'Sale not found in this pharmacy' })
   getSale(
@@ -79,8 +84,12 @@ export class PosController {
       'Restores the exact original inventory batches, records refund payments and updates the sale status atomically.',
   })
   @ApiCreatedResponse({ description: 'Return recorded successfully' })
-  @ApiBadRequestResponse({ description: 'Invalid quantity or refund payment total' })
-  @ApiConflictResponse({ description: 'Return state or mutation identity conflict' })
+  @ApiBadRequestResponse({
+    description: 'Invalid quantity or refund payment total',
+  })
+  @ApiConflictResponse({
+    description: 'Return state or mutation identity conflict',
+  })
   createReturn(
     @CurrentUser() user: JwtPayload,
     @Param('saleId', ParseUUIDPipe) saleId: string,
@@ -98,7 +107,9 @@ export class PosController {
   })
   @ApiCreatedResponse({ description: 'Sale cancelled and stock restored' })
   @ApiBadRequestResponse({ description: 'Refund payment total is invalid' })
-  @ApiConflictResponse({ description: 'Sale state or mutation identity conflict' })
+  @ApiConflictResponse({
+    description: 'Sale state or mutation identity conflict',
+  })
   cancelSale(
     @CurrentUser() user: JwtPayload,
     @Param('saleId', ParseUUIDPipe) saleId: string,

@@ -22,6 +22,11 @@ export class AuditController {
     @Query('entityType') entityType?: string,
     @Query('userId') userId?: string,
   ) {
-    return this.auditService.findAll(Number(page) || 1, Number(limit) || 50, entityType, userId);
+    return this.auditService.findAll(
+      Number(page) || 1,
+      Number(limit) || 50,
+      entityType,
+      userId,
+    );
   }
 }

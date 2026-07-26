@@ -1,8 +1,11 @@
 import {
-  Injectable, NotFoundException, ConflictException, ForbiddenException,
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Decimal } from '@prisma/client/runtime/library';
 import { Prisma } from '@prisma/client';
 
 interface QuantityDiscountTier {
@@ -15,10 +18,10 @@ export interface UpsertSupplierProductDto {
   price: number;
   stock: number;
   minOrder?: number;
-  expiryDate?: string;
+  expiryDate: string;
   notes?: string;
   isAvailable?: boolean;
-  batchNumber?: string;
+  batchNumber: string;
   quantityDiscounts?: QuantityDiscountTier[];
 }
 
@@ -88,7 +91,17 @@ export class SupplierProductsService {
       where: { id: dto.productId, deletedAt: null },
     });
     if (!product) throw new NotFoundException('Product not found');
-    if (product.status !== 'ACTIVE') throw new ConflictException('Cannot create offers for non-active products');
+    if (product.status !== 'ACTIVE')
+      throw new ConflictException(
+        'Cannot create offers for non-active products',
+      );
+    this.validateSellableOffer({
+      stock: dto.stock,
+      isAvailable: dto.isAvailable ?? true,
+      batchNumber: dto.batchNumber,
+      expiryDate: new Date(dto.expiryDate),
+    });
+    this.validateQuantityDiscounts(dto.price, dto.quantityDiscounts);
 
     return this.prisma.supplierProduct.upsert({
       where: { supplierId_productId: { supplierId, productId: dto.productId } },
@@ -103,8 +116,7 @@ export class SupplierProductsService {
         isAvailable: dto.isAvailable ?? true,
         batchNumber: dto.batchNumber,
         quantityDiscounts: dto.quantityDiscounts as
-          | Prisma.InputJsonValue
-          | undefined,
+          Prisma.InputJsonValue | undefined,
       },
       update: {
         price: dto.price,
@@ -115,8 +127,7 @@ export class SupplierProductsService {
         isAvailable: dto.isAvailable,
         batchNumber: dto.batchNumber,
         quantityDiscounts: dto.quantityDiscounts as
-          | Prisma.InputJsonValue
-          | undefined,
+          Prisma.InputJsonValue | undefined,
       },
       include: { product: true },
     });
@@ -125,7 +136,21 @@ export class SupplierProductsService {
   async update(supplierId: string, id: string, dto: UpdateSupplierProductDto) {
     const sp = await this.prisma.supplierProduct.findUnique({ where: { id } });
     if (!sp) throw new NotFoundException('Supplier product not found');
-    if (sp.supplierId !== supplierId) throw new ForbiddenException('Not your product');
+    if (sp.supplierId !== supplierId)
+      throw new ForbiddenException('Not your product');
+    const effectiveExpiry = dto.expiryDate
+      ? new Date(dto.expiryDate)
+      : sp.expiryDate;
+    this.validateSellableOffer({
+      stock: dto.stock ?? sp.stock,
+      isAvailable: dto.isAvailable ?? sp.isAvailable,
+      batchNumber: dto.batchNumber ?? sp.batchNumber,
+      expiryDate: effectiveExpiry,
+    });
+    this.validateQuantityDiscounts(
+      dto.price ?? Number(sp.price),
+      dto.quantityDiscounts,
+    );
 
     return this.prisma.supplierProduct.update({
       where: { id },
@@ -135,8 +160,12 @@ export class SupplierProductsService {
         ...(dto.minOrder !== undefined ? { minOrder: dto.minOrder } : {}),
         ...(dto.expiryDate ? { expiryDate: new Date(dto.expiryDate) } : {}),
         ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
-        ...(dto.isAvailable !== undefined ? { isAvailable: dto.isAvailable } : {}),
-        ...(dto.batchNumber !== undefined ? { batchNumber: dto.batchNumber } : {}),
+        ...(dto.isAvailable !== undefined
+          ? { isAvailable: dto.isAvailable }
+          : {}),
+        ...(dto.batchNumber !== undefined
+          ? { batchNumber: dto.batchNumber }
+          : {}),
         ...(dto.quantityDiscounts !== undefined
           ? {
               quantityDiscounts:
@@ -151,7 +180,51 @@ export class SupplierProductsService {
   async remove(supplierId: string, id: string) {
     const sp = await this.prisma.supplierProduct.findUnique({ where: { id } });
     if (!sp) throw new NotFoundException('Supplier product not found');
-    if (sp.supplierId !== supplierId) throw new ForbiddenException('Not your product');
+    if (sp.supplierId !== supplierId)
+      throw new ForbiddenException('Not your product');
     return this.prisma.supplierProduct.delete({ where: { id } });
+  }
+
+  private validateSellableOffer(input: {
+    stock: number;
+    isAvailable: boolean;
+    batchNumber?: string | null;
+    expiryDate?: Date | null;
+  }) {
+    if (!input.isAvailable || input.stock === 0) return;
+    if (!input.batchNumber?.trim()) {
+      throw new BadRequestException(
+        'Batch number is required for an available offer with stock',
+      );
+    }
+    if (!input.expiryDate || Number.isNaN(input.expiryDate.getTime())) {
+      throw new BadRequestException(
+        'Expiry date is required for an available offer with stock',
+      );
+    }
+    if (input.expiryDate <= new Date()) {
+      throw new BadRequestException('Expired stock cannot be offered');
+    }
+  }
+
+  private validateQuantityDiscounts(
+    basePrice: number,
+    tiers?: QuantityDiscountTier[],
+  ) {
+    if (!tiers?.length) return;
+    let previousMinimum = 0;
+    for (const tier of tiers) {
+      if (tier.minQuantity <= previousMinimum) {
+        throw new BadRequestException(
+          'Quantity discount tiers must be ordered by increasing minimum quantity',
+        );
+      }
+      if (tier.unitPrice > basePrice) {
+        throw new BadRequestException(
+          'A quantity discount price cannot exceed the base price',
+        );
+      }
+      previousMinimum = tier.minQuantity;
+    }
   }
 }

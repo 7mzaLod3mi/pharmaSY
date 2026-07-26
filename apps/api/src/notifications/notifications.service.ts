@@ -1,8 +1,8 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { 
-  NotificationType, 
-  NotificationCategory, 
+import {
+  NotificationType,
+  NotificationCategory,
   NotificationPriority,
   NotificationChannel,
   Notification,
@@ -27,7 +27,7 @@ export interface CreateNotificationDto {
   actionUrl?: string;
   entityType?: string;
   entityId?: string;
-  metadata?: any;
+  metadata?: Prisma.InputJsonValue;
   templateData: TemplateData;
   expiresAt?: Date;
 }
@@ -47,17 +47,20 @@ export class NotificationsService {
     let prefs = await this.prisma.notificationPreference.findUnique({
       where: { userId },
     });
-    
+
     if (!prefs) {
       prefs = await this.prisma.notificationPreference.create({
         data: { userId },
       });
     }
-    
+
     return prefs;
   }
 
-  async updatePreferences(userId: string, data: UpdateNotificationPreferencesDto) {
+  async updatePreferences(
+    userId: string,
+    data: UpdateNotificationPreferencesDto,
+  ) {
     return this.prisma.notificationPreference.upsert({
       where: { userId },
       update: data,
@@ -75,8 +78,8 @@ export class NotificationsService {
       deletedAt: null,
       OR: [
         { expiresAt: null },
-        { expiresAt: { gt: new Date() } } // Exclude expired
-      ]
+        { expiresAt: { gt: new Date() } }, // Exclude expired
+      ],
     };
 
     if (query.category) where.category = query.category;
@@ -105,14 +108,11 @@ export class NotificationsService {
 
   async getUnreadCount(userId: string) {
     const count = await this.prisma.notification.count({
-      where: { 
-        userId, 
-        isRead: false, 
+      where: {
+        userId,
+        isRead: false,
         deletedAt: null,
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gt: new Date() } }
-        ]
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
       },
     });
     return { count };
@@ -167,18 +167,22 @@ export class NotificationsService {
         where: { eventId: dto.eventId },
       });
       if (existing) {
-        this.logger.debug(`Idempotency hit: Ignored duplicate eventId ${dto.eventId}`);
+        this.logger.debug(
+          `Idempotency hit: Ignored duplicate eventId ${dto.eventId}`,
+        );
         return existing;
       }
     }
 
     // 2. Preferences Check
     const prefs = await this.getPreferences(dto.userId);
-    
+
     // Check if category is enabled
     const categoryKey = this.mapCategoryToPref(dto.category);
-    if (categoryKey && (prefs as any)[categoryKey] === false) {
-      this.logger.debug(`Notification ignored: Category ${dto.category} disabled by user ${dto.userId}`);
+    if (categoryKey && prefs[categoryKey] === false) {
+      this.logger.debug(
+        `Notification ignored: Category ${dto.category} disabled by user ${dto.userId}`,
+      );
       return null;
     }
 
@@ -194,15 +198,21 @@ export class NotificationsService {
           type: NotificationType.LOW_STOCK,
           isRead: false,
           deletedAt: null,
-          createdAt: { gte: new Date(Date.now() - 60 * 60 * 1000) } // Last 1 hour
-        }
+          createdAt: { gte: new Date(Date.now() - 60 * 60 * 1000) }, // Last 1 hour
+        },
       });
 
       if (recent) {
         // Aggregate
-        const currentCount = (recent.metadata as any)?.aggregatedCount || 1;
+        const metadata =
+          recent.metadata &&
+          typeof recent.metadata === 'object' &&
+          !Array.isArray(recent.metadata)
+            ? recent.metadata
+            : {};
+        const currentCount = Number(metadata.aggregatedCount) || 1;
         const newCount = currentCount + 1;
-        
+
         content = {
           titleAr: 'تنبيه: مخزون منخفض',
           titleEn: 'Low Stock Alert',
@@ -217,10 +227,10 @@ export class NotificationsService {
             titleEn: content.titleEn,
             bodyAr: content.bodyAr,
             bodyEn: content.bodyEn,
-            metadata: { ...((recent.metadata as object) || {}), aggregatedCount: newCount },
-          }
+            metadata: { ...metadata, aggregatedCount: newCount },
+          },
         });
-        
+
         this.gateway.emitToUser(dto.userId, 'notification:updated', updated);
         return updated;
       }
@@ -276,12 +286,14 @@ export class NotificationsService {
     }
 
     if (channels.includes(NotificationChannel.EMAIL)) {
-      const user = await this.prisma.user.findUnique({ where: { id: dto.userId }});
+      const user = await this.prisma.user.findUnique({
+        where: { id: dto.userId },
+      });
       if (user?.email) {
         await this.emailQueue.add('send-email', {
           to: user.email,
           subject: content.titleEn, // Could use i18n based on user preference later
-          html: `<div dir="auto"><h2>${content.titleAr} / ${content.titleEn}</h2><p>${content.bodyAr}</p><p>${content.bodyEn}</p></div>`,
+          html: `<div dir="auto"><h2>${this.escapeHtml(content.titleAr)} / ${this.escapeHtml(content.titleEn)}</h2><p>${this.escapeHtml(content.bodyAr)}</p><p>${this.escapeHtml(content.bodyEn)}</p></div>`,
         });
       }
     }
@@ -324,8 +336,18 @@ export class NotificationsService {
     return updated;
   }
 
-  private mapCategoryToPref(category: NotificationCategory): string | null {
-    const map: Record<NotificationCategory, string> = {
+  private mapCategoryToPref(
+    category: NotificationCategory,
+  ):
+    | 'orders'
+    | 'marketplace'
+    | 'inventory'
+    | 'pharmacyExchange'
+    | 'productRequests'
+    | 'adminApproval'
+    | 'system'
+    | 'marketing' {
+    const map = {
       [NotificationCategory.ORDERS]: 'orders',
       [NotificationCategory.MARKETPLACE]: 'marketplace',
       [NotificationCategory.INVENTORY]: 'inventory',
@@ -334,7 +356,26 @@ export class NotificationsService {
       [NotificationCategory.ADMIN_APPROVAL]: 'adminApproval',
       [NotificationCategory.SYSTEM]: 'system',
       [NotificationCategory.MARKETING]: 'marketing',
-    };
-    return map[category] || null;
+    } satisfies Record<
+      NotificationCategory,
+      | 'orders'
+      | 'marketplace'
+      | 'inventory'
+      | 'pharmacyExchange'
+      | 'productRequests'
+      | 'adminApproval'
+      | 'system'
+      | 'marketing'
+    >;
+    return map[category];
+  }
+
+  private escapeHtml(value: string) {
+    return value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
   }
 }
